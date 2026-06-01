@@ -80,20 +80,25 @@
 
         .game-board {
             display: grid;
+            grid-template-columns: repeat(10, 36px);
+            grid-template-rows: repeat(8, 36px);
             gap: 2px;
             background: var(--border);
             padding: 4px;
             border-radius: 8px;
+            width: fit-content;
+            margin: 0 auto;
         }
 
         .cell {
-            aspect-ratio: 1;
+            width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             position: relative;
-            font-size: clamp(16px, 4vw, 28px);
+            font-size: 20px;
             border-radius: 4px;
             transition: all 0.15s ease;
         }
@@ -419,6 +424,24 @@
             border-radius: 4px;
         }
 
+        @media (max-width: 400px) {
+            .game-board {
+                grid-template-columns: repeat(10, 28px);
+                grid-template-rows: repeat(8, 28px);
+            }
+
+            .cell {
+                width: 28px;
+                height: 28px;
+                font-size: 16px;
+            }
+
+            .piece {
+                width: 75%;
+                height: 75%;
+            }
+        }
+
         @media (min-width: 768px) {
             .game-container {
                 flex-direction: row;
@@ -434,10 +457,15 @@
                 flex-shrink: 0;
             }
 
+            .game-board {
+                grid-template-columns: repeat(10, 50px);
+                grid-template-rows: repeat(8, 50px);
+            }
+
             .cell {
-                width: 56px;
-                height: 56px;
-                font-size: 24px;
+                width: 50px;
+                height: 50px;
+                font-size: 26px;
             }
         }
     </style>

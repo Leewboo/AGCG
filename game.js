@@ -493,7 +493,6 @@ const Game = {
     renderBoard: () => {
         const container = document.getElementById('gameBoard');
         container.innerHTML = '';
-        container.style.gridTemplateColumns = 'repeat(10, minmax(32px, 1fr))';
         
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 10; col++) {
