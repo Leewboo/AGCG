@@ -64,7 +64,7 @@ const SKILLS = {
             if (!user.furyActive) {
                 user.attack = Math.floor(user.attack * 1.5);
                 user.furyActive = true;
-                Game.addLog(`${user.name} 进入狂暴状态！`);
+                Game.addLog(user.name + ' 进入狂暴状态');
             }
         }
     },
@@ -107,7 +107,7 @@ const SKILLS = {
 const SUMMONS = {
     soldier: {
         name: '士兵',
-        symbol: '⚔',
+        symbol: '兵',
         hp: 30,
         maxHp: 30,
         attack: 8,
@@ -122,7 +122,7 @@ const GENERALS = {
     guanYu: {
         id: 'guanYu',
         name: '关羽',
-        symbol: '🗡',
+        symbol: '关',
         hp: 100,
         maxHp: 100,
         attack: 25,
@@ -135,7 +135,7 @@ const GENERALS = {
     zhangFei: {
         id: 'zhangFei',
         name: '张飞',
-        symbol: '🔱',
+        symbol: '张',
         hp: 110,
         maxHp: 110,
         attack: 28,
@@ -148,7 +148,7 @@ const GENERALS = {
     zhugeLiang: {
         id: 'zhugeLiang',
         name: '诸葛亮',
-        symbol: '📜',
+        symbol: '诸',
         hp: 70,
         maxHp: 70,
         attack: 15,
@@ -161,7 +161,7 @@ const GENERALS = {
     caoCao: {
         id: 'caoCao',
         name: '曹操',
-        symbol: '👑',
+        symbol: '曹',
         hp: 90,
         maxHp: 90,
         attack: 22,
@@ -174,7 +174,7 @@ const GENERALS = {
     sunQuan: {
         id: 'sunQuan',
         name: '孙权',
-        symbol: '🌊',
+        symbol: '孙',
         hp: 85,
         maxHp: 85,
         attack: 20,
@@ -187,7 +187,7 @@ const GENERALS = {
     zhaoYun: {
         id: 'zhaoYun',
         name: '赵云',
-        symbol: '⚡',
+        symbol: '赵',
         hp: 95,
         maxHp: 95,
         attack: 26,
@@ -200,7 +200,7 @@ const GENERALS = {
     maChao: {
         id: 'maChao',
         name: '马超',
-        symbol: '🐴',
+        symbol: '马',
         hp: 88,
         maxHp: 88,
         attack: 27,
@@ -213,7 +213,7 @@ const GENERALS = {
     huangZhong: {
         id: 'huangZhong',
         name: '黄忠',
-        symbol: '🏹',
+        symbol: '黄',
         hp: 75,
         maxHp: 75,
         attack: 24,
@@ -226,7 +226,7 @@ const GENERALS = {
     luBu: {
         id: 'luBu',
         name: '吕布',
-        symbol: '🔥',
+        symbol: '吕',
         hp: 120,
         maxHp: 120,
         attack: 35,

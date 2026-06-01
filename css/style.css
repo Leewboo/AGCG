@@ -6,24 +6,24 @@
 }
 
 :root {
-    --bg-primary: #f5f5f0;
-    --bg-secondary: #fafafa;
+    --bg-primary: #f0f0f0;
+    --bg-secondary: #f8f8f8;
     --bg-panel: #ffffff;
-    --text-primary: #1a1a1a;
+    --text-primary: #222222;
     --text-secondary: #666666;
-    --text-muted: #999999;
-    --border: #e0e0e0;
-    --accent-red: #e53935;
-    --accent-blue: #1565c0;
-    --accent-green: #2e7d32;
-    --accent-yellow: #f9a825;
-    --terrain-grass: #c8e6c9;
-    --terrain-forest: #a5d6a7;
-    --terrain-mountain: #bdbdbd;
-    --terrain-water: #90caf9;
-    --terrain-castle: #d7ccc8;
-    --terrain-swamp: #80cbc4;
-    --shadow: rgba(0, 0, 0, 0.08);
+    --text-muted: #aaaaaa;
+    --border: #dddddd;
+    --accent-red: #d32f2f;
+    --accent-blue: #1976d2;
+    --accent-green: #388e3c;
+    --accent-yellow: #f57c00;
+    --terrain-grass: #f8f8f8;
+    --terrain-forest: #e8f5e9;
+    --terrain-mountain: #eeeeee;
+    --terrain-water: #e3f2fd;
+    --terrain-castle: #efebe9;
+    --terrain-swamp: #e0f2f1;
+    --shadow: rgba(0, 0, 0, 0.06);
     --radius-sm: 4px;
     --radius-md: 8px;
     --radius-lg: 16px;
@@ -275,11 +275,11 @@ body {
 }
 
 .health-fill {
-    background: linear-gradient(90deg, #ef5350, #43a047);
+    background: var(--accent-green);
 }
 
 .energy-fill {
-    background: linear-gradient(90deg, #7e57c2, #5c6bc0);
+    background: var(--accent-blue);
 }
 
 .piece-stats {

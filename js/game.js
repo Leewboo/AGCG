@@ -53,7 +53,7 @@ const Game = {
             div.innerHTML = `
                 <div class="symbol">${general.symbol}</div>
                 <div class="name">${general.name}</div>
-                <div class="stats">❤️${general.hp} ⚔${general.attack} 🛡${general.defense}</div>
+                <div class="stats">生命${general.hp} 攻击${general.attack} 防御${general.defense}</div>
             `;
             if (!this.selectedGenerals.some(g => g.id === general.id)) {
                 div.onclick = () => this.toggleGeneralSelection(general);
@@ -205,7 +205,7 @@ const Game = {
         this.currentPlayer = 1;
         document.getElementById('placementPhase').style.display = 'none';
         document.getElementById('gamePhase').style.display = 'block';
-        this.addLog('游戏开始！玩家1先手');
+        this.addLog('游戏开始 玩家1先手');
         this.renderBoard();
     },
 
@@ -386,13 +386,13 @@ const Game = {
         defender.hp -= finalDamage;
         attacker.hasAttacked = true;
         
-        this.addLog(attacker.name + ' 攻击 ' + defender.name + '，造成 ' + finalDamage + ' 点伤害！');
+        this.addLog(attacker.name + ' 攻击 ' + defender.name + '，造成 ' + finalDamage + ' 点伤害');
         
         if (defender.hp <= 0) {
             defender.hp = 0;
             this.board[defender.row][defender.col] = null;
             this.pieces = this.pieces.filter(p => p !== defender);
-            this.addLog(defender.name + ' 被击败了！');
+            this.addLog(defender.name + ' 被击败了');
             this.checkWinCondition();
         }
         
@@ -416,7 +416,7 @@ const Game = {
             <div class="piece-name">${p.name}</div>
             <div class="stat-bar">
                 <div class="stat-header">
-                    <span class="stat-label">❤️ 生命</span>
+                    <span class="stat-label">生命</span>
                     <span class="stat-value">${p.hp}/${p.maxHp}</span>
                 </div>
                 <div class="bar-bg">
@@ -425,7 +425,7 @@ const Game = {
             </div>
             <div class="stat-bar">
                 <div class="stat-header">
-                    <span class="stat-label">⚡ 能量</span>
+                    <span class="stat-label">能量</span>
                     <span class="stat-value">${p.energy}/${p.maxEnergy}</span>
                 </div>
                 <div class="bar-bg">
@@ -433,11 +433,11 @@ const Game = {
                 </div>
             </div>
             <div class="piece-stats">
-                <span>⚔ ${p.attack}</span>
-                <span>🛡 ${p.defense}</span>
+                <span>攻击 ${p.attack}</span>
+                <span>防御 ${p.defense}</span>
             </div>
             <div class="piece-status">
-                ${p.hasMoved ? '✓ 已移动' : '○ 可移动'} | ${p.hasAttacked ? '✓ 已攻击' : '○ 可攻击'}
+                ${p.hasMoved ? '已移动' : '可移动'} | ${p.hasAttacked ? '已攻击' : '可攻击'}
             </div>
         `;
     },
@@ -547,9 +547,9 @@ const Game = {
 
     showWinner: function(player) {
         this.gamePhase = 'ended';
-        this.addLog('🎉 玩家' + player + ' 获胜！');
+        this.addLog('玩家' + player + ' 获胜');
         setTimeout(() => {
-            alert('🎉 玩家' + player + ' 获胜！');
+            alert('玩家' + player + ' 获胜');
         }, 100);
     },
 
