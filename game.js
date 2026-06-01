@@ -406,9 +406,9 @@ const Game = {
             const div = document.createElement('div');
             div.className = 'piece-option';
             div.innerHTML = `
-                <div style="font-size: 32px;">${general.symbol}</div>
-                <div style="font-weight: bold;">${general.name}</div>
-                <div style="font-size: 12px; margin-top: 5px;">
+                <div class="symbol">${general.symbol}</div>
+                <div class="name">${general.name}</div>
+                <div class="stats">
                     ❤️${general.hp} ⚔️${general.attack} 🛡️${general.defense}
                 </div>
             `;
@@ -493,6 +493,7 @@ const Game = {
     renderBoard: () => {
         const container = document.getElementById('gameBoard');
         container.innerHTML = '';
+        container.style.gridTemplateColumns = 'repeat(10, minmax(32px, 1fr))';
         
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 10; col++) {
@@ -658,29 +659,38 @@ const Game = {
     renderPieceInfo: () => {
         const container = document.getElementById('pieceInfo');
         if (!Game.selectedPiece) {
-            container.innerHTML = '<p>选择一个武将查看信息</p>';
+            container.innerHTML = '<p style="color: var(--text-light);">选择一个武将查看信息</p>';
             return;
         }
         
         const p = Game.selectedPiece;
         container.innerHTML = `
-            <div style="text-align: center; font-size: 32px; margin-bottom: 10px;">${p.symbol}</div>
-            <div style="text-align: center; font-weight: bold; font-size: 18px;">${p.name}</div>
-            <div style="margin-top: 10px;">
-                <div>❤️ 生命: ${p.hp}/${p.maxHp}</div>
-                <div class="health-bar">
-                    <div class="health-fill" style="width: ${(p.hp/p.maxHp)*100}%"></div>
+            <div class="piece-symbol">${p.symbol}</div>
+            <div class="piece-name">${p.name}</div>
+            <div class="stat-bar">
+                <div class="stat-label">
+                    <span>❤️ 生命</span>
+                    <span>${p.hp}/${p.maxHp}</span>
                 </div>
-                <div>⚡ 能量: ${p.energy}/${p.maxEnergy}</div>
-                <div class="energy-bar">
-                    <div class="energy-fill" style="width: ${(p.energy/p.maxEnergy)*100}%"></div>
+                <div class="bar-bg">
+                    <div class="bar-fill health-fill" style="width: ${(p.hp/p.maxHp)*100}%"></div>
                 </div>
-                <div style="margin-top: 10px;">
-                    ⚔️ 攻击: ${p.attack} | 🛡️ 防御: ${p.defense}
+            </div>
+            <div class="stat-bar">
+                <div class="stat-label">
+                    <span>⚡ 能量</span>
+                    <span>${p.energy}/${p.maxEnergy}</span>
                 </div>
-                <div style="font-size: 12px; margin-top: 5px; opacity: 0.8;">
-                    ${p.hasMoved ? '✓ 已移动' : '○ 可移动'} | ${p.hasAttacked ? '✓ 已攻击' : '○ 可攻击'}
+                <div class="bar-bg">
+                    <div class="bar-fill energy-fill" style="width: ${(p.energy/p.maxEnergy)*100}%"></div>
                 </div>
+            </div>
+            <div class="piece-stats">
+                <span>⚔️ ${p.attack}</span>
+                <span>🛡️ ${p.defense}</span>
+            </div>
+            <div style="font-size: 12px; color: var(--text-light); margin-top: 8px;">
+                ${p.hasMoved ? '✓ 已移动' : '○ 可移动'} | ${p.hasAttacked ? '✓ 已攻击' : '○ 可攻击'}
             </div>
         `;
     },
@@ -690,7 +700,7 @@ const Game = {
         container.innerHTML = '';
         
         if (!Game.selectedPiece) {
-            container.innerHTML = '<p style="opacity: 0.6;">选择武将查看技能</p>';
+            container.innerHTML = '<p style="color: var(--text-light);">选择武将查看技能</p>';
             return;
         }
         
@@ -701,7 +711,7 @@ const Game = {
             
             if (skill.type === 'passive') {
                 btn.classList.add('passive');
-                btn.innerHTML = `${skill.name} (被动)<br><span style="font-size: 11px;">${skill.description}</span>`;
+                btn.innerHTML = `<div class="skill-name">${skill.name} (被动)</div><div class="skill-desc">${skill.description}</div>`;
                 btn.disabled = true;
             } else {
                 const canUse = Game.selectedPiece.energy >= skill.energyCost;
@@ -710,7 +720,7 @@ const Game = {
                 } else if (!canUse) {
                     btn.classList.add('disabled');
                 }
-                btn.innerHTML = `${skill.name} (${skill.energyCost}能量)<br><span style="font-size: 11px;">${skill.description}</span>`;
+                btn.innerHTML = `<div class="skill-name">${skill.name} (${skill.energyCost}能量)</div><div class="skill-desc">${skill.description}</div>`;
                 btn.disabled = !canUse;
                 btn.onclick = () => Game.activateSkill(skillId);
             }
