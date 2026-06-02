@@ -1,12 +1,13 @@
 // 全将战棋 - UI交互系统
 
 class UI {
-    constructor(canvas, gameState, board, renderer, combat) {
+    constructor(canvas, gameState, board, renderer, combat, game) {
         this.canvas = canvas;
         this.state = gameState;
         this.board = board;
         this.renderer = renderer;
         this.combat = combat;
+        this.game = game;
 
         this.setupEventListeners();
     }
@@ -156,6 +157,8 @@ class UI {
         // 初始化部署数组
         this.state.players[1].deployedUnits = [];
         this.state.players[2].deployedUnits = [];
+        // 重新计算画布大小和偏移（确保棋盘能正确渲染）
+        this.game.resizeCanvas();
     }
 
     // 布阵界面点击

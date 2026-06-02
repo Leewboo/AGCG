@@ -21,7 +21,7 @@ class Game {
         this.board = new Board(this.state);
         this.renderer = new Renderer(this.canvas, this.state, this.board);
         this.combat = new Combat(this.state, this.board);
-        this.ui = new UI(this.canvas, this.state, this.board, this.renderer, this.combat);
+        this.ui = new UI(this.canvas, this.state, this.board, this.renderer, this.combat, this);
 
         // 初始渲染
         this.renderer.resize(this.canvas.width, this.canvas.height);
@@ -36,9 +36,10 @@ class Game {
         const maxWidth = window.innerWidth - 40;
         const maxHeight = window.innerHeight - 40;
 
-        // 最小尺寸
-        const minWidth = 900;
-        const minHeight = 700;
+        // 最小尺寸 - 确保棋盘能完整显示
+        const boardPixelSize = 8 * 70; // 8x8棋盘，每个格子70px
+        const minWidth = Math.max(boardPixelSize + 200, 900);
+        const minHeight = Math.max(boardPixelSize + 100, 700);
 
         this.canvas.width = Math.max(minWidth, Math.min(maxWidth, 1200));
         this.canvas.height = Math.max(minHeight, Math.min(maxHeight, 800));
