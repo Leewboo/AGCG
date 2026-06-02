@@ -161,8 +161,8 @@ class Renderer {
                 const t = this.s.getTile(x, y);
                 const px = this.ox + x * this.cell;
                 const py = this.oy + y * this.cell;
-                const colors = { GRASS: '#1a1a1a', MOUNTAIN: '#2a2a2a', RIVER: '#1a202a', CITY: '#2a1a1a' };
-                this.rect(px, py, this.cell, this.cell, colors[t.terrain] || '#1a1a1a', '#222');
+                const colors = { GRASS: '#222', MOUNTAIN: '#333', RIVER: '#1a2a3a', CITY: '#3a2a1a' };
+                this.rect(px, py, this.cell, this.cell, colors[t.terrain] || '#222', '#444');
             }
         }
     }
