@@ -8,6 +8,7 @@ class Game {
         this.renderer = null;
         this.combat = null;
         this.ui = null;
+        this.isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         this.init();
     }
@@ -15,7 +16,8 @@ class Game {
     init() {
         // 设置画布大小
         this.resizeCanvas();
-        window.addEventListener('resize', () => this.resizeCanvas());
+        window.addEventListener('resize', () => this.handleResize());
+        window.addEventListener('orientationchange', () => setTimeout(() => this.handleResize(), 100));
 
         // 初始化系统
         this.board = new Board(this.state);
@@ -31,27 +33,56 @@ class Game {
         this.gameLoop();
     }
 
+    handleResize() {
+        // 延迟执行以等待布局完成
+        setTimeout(() => this.resizeCanvas(), 50);
+    }
+
     resizeCanvas() {
-        // 根据窗口大小调整画布
-        const maxWidth = window.innerWidth - 40;
-        const maxHeight = window.innerHeight - 40;
+        const container = document.getElementById('game-container');
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
 
-        // 最小尺寸 - 确保棋盘能完整显示
-        const boardPixelSize = 8 * 70; // 8x8棋盘，每个格子70px
-        const minWidth = Math.max(boardPixelSize + 200, 900);
-        const minHeight = Math.max(boardPixelSize + 100, 700);
+        // 棋盘所需最小尺寸
+        const boardSize = 8;
+        const cellSize = this.isMobile ? 40 : 70; // 移动端缩小格子
+        const boardPixelSize = boardSize * cellSize;
 
-        this.canvas.width = Math.max(minWidth, Math.min(maxWidth, 1200));
-        this.canvas.height = Math.max(minHeight, Math.min(maxHeight, 800));
+        // 计算合适的大小
+        let width, height;
+
+        if (this.isMobile) {
+            // 移动端：优先填满屏幕
+            width = containerWidth;
+            height = containerHeight;
+
+            // 确保最小尺寸
+            width = Math.max(width, 320);
+            height = Math.max(height, 400);
+        } else {
+            // 桌面端
+            width = Math.min(containerWidth - 20, 1200);
+            height = Math.min(containerHeight - 20, 800);
+
+            // 最小尺寸
+            width = Math.max(width, boardPixelSize + 200);
+            height = Math.max(height, boardPixelSize + 100);
+        }
+
+        this.canvas.width = width;
+        this.canvas.height = height;
 
         // 重新计算棋盘偏移
         if (this.renderer) {
+            this.renderer.cellSize = cellSize;
             this.renderer.resize(this.canvas.width, this.canvas.height);
         }
     }
 
     gameLoop() {
-        this.renderer.render();
+        if (this.renderer) {
+            this.renderer.render();
+        }
         requestAnimationFrame(() => this.gameLoop());
     }
 }

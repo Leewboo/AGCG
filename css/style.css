@@ -6,6 +6,13 @@
     box-sizing: border-box;
 }
 
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
+}
+
 body {
     font-family: 'Noto Sans SC', sans-serif;
     background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 50%, #0d0d1a 100%);
@@ -13,14 +20,16 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    overflow: hidden;
 }
 
 #game-container {
     position: relative;
+    width: 100%;
+    height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
+    overflow: hidden;
 }
 
 #gameCanvas {
@@ -28,17 +37,31 @@ body {
     border-radius: 8px;
     box-shadow:
         0 0 20px rgba(201, 162, 39, 0.3),
-        0 0 60px rgba(201, 162, 39, 0.1),
-        inset 0 0 100px rgba(0, 0, 0, 0.5);
+        0 0 60px rgba(201, 162, 39, 0.1);
     cursor: pointer;
-    transition: box-shadow 0.3s ease;
+    touch-action: none;
+    max-width: 100%;
+    max-height: 100%;
 }
 
-#gameCanvas:hover {
-    box-shadow:
-        0 0 30px rgba(201, 162, 39, 0.5),
-        0 0 80px rgba(201, 162, 39, 0.2),
-        inset 0 0 100px rgba(0, 0, 0, 0.5);
+/* 移动端适配 */
+@media (max-width: 768px), (max-height: 600px) {
+    body {
+        padding: 0;
+        margin: 0;
+    }
+
+    #game-container {
+        width: 100vw;
+        height: 100vh;
+    }
+
+    #gameCanvas {
+        width: 100% !important;
+        height: 100% !important;
+        border-width: 2px;
+        border-radius: 0;
+    }
 }
 
 /* 装饰元素 */
@@ -52,20 +75,6 @@ body::before {
     background-image:
         radial-gradient(circle at 20% 80%, rgba(201, 162, 39, 0.05) 0%, transparent 50%),
         radial-gradient(circle at 80% 20%, rgba(196, 30, 58, 0.05) 0%, transparent 50%);
-    pointer-events: none;
-    z-index: -1;
-}
-
-/* 背景纹理 */
-body::after {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-    opacity: 0.03;
     pointer-events: none;
     z-index: -1;
 }
@@ -85,16 +94,6 @@ h1 {
     }
 }
 
-@media (max-width: 768px) {
-    body {
-        padding: 10px;
-    }
-
-    #gameCanvas {
-        border-width: 2px;
-    }
-}
-
 /* 动画效果 */
 @keyframes pulse {
     0%, 100% {
@@ -102,15 +101,6 @@ h1 {
     }
     50% {
         opacity: 0.7;
-    }
-}
-
-@keyframes glow {
-    0%, 100% {
-        box-shadow: 0 0 20px rgba(201, 162, 39, 0.3);
-    }
-    50% {
-        box-shadow: 0 0 40px rgba(201, 162, 39, 0.6);
     }
 }
 
@@ -123,24 +113,6 @@ h1 {
     color: #c9a227;
     font-size: 24px;
     animation: pulse 1.5s infinite;
-}
-
-/* 滚动条样式 */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: #1a1a2e;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #c9a227;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #d4af37;
 }
 
 /* 选择文本颜色 */
