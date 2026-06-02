@@ -13,19 +13,29 @@ class UI {
 
     // 设置事件监听
     setupEventListeners() {
+        // 桌面点击
         this.canvas.addEventListener('click', (e) => this.handleClick(e));
+        // 触摸事件（移动端）
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            this.handleClick({ clientX: touch.clientX, clientY: touch.clientY });
+        }, { passive: false });
+        
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
 
         // 键盘事件
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
     }
 
-    // 获取点击位置
+    // 获取点击位置（考虑canvas缩放）
     getClickPosition(e) {
         const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
         return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY
         };
     }
 
@@ -116,8 +126,12 @@ class UI {
 
                 if (this.state.selectGeneral(player, general)) {
                     // 切换到下一玩家选将
-                    if (this.state.players[1].selectedGenerals.length === 5 &&
-                        this.state.players[2].selectedGenerals.length < 5) {
+                    if (this.state.selectingPlayer === 1 &&
+                        this.state.players[1].selectedGenerals.length === 5) {
+                        this.state.switchSelectPlayer();
+                    } else if (this.state.selectingPlayer === 2 &&
+                        this.state.players[2].selectedGenerals.length === 5) {
+                        // 双方都选完了，进入布阵阶段
                         this.state.switchSelectPlayer();
                     }
                 }
@@ -139,6 +153,9 @@ class UI {
         this.state.initBoard(8);
         this.state.currentPlayer = 1;
         this.state.viewState = 'DEPLOY';
+        // 初始化部署数组
+        this.state.players[1].deployedUnits = [];
+        this.state.players[2].deployedUnits = [];
     }
 
     // 布阵界面点击
@@ -401,6 +418,7 @@ class UI {
     // 游戏结束点击
     handleGameOverClick(pos) {
         const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height / 2;
         if (this.isInRect(pos, centerX - 80, centerY + 30, 160, 50)) {
             this.state.reset();
             this.state.viewState = 'MENU';
