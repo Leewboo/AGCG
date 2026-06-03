@@ -1,0 +1,435 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #f5f2eb;
+    color: #1a1a1a;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 16px;
+}
+
+#app {
+    width: 100%;
+    height: 100%;
+}
+
+.screen {
+    display: none;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.screen.active {
+    display: flex;
+}
+
+/* 菜单样式 */
+.menu-container {
+    text-align: center;
+    padding: 40px;
+}
+
+.title {
+    font-size: 48px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: 4px;
+}
+
+.subtitle {
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 60px;
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+}
+
+.menu-btn {
+    padding: 16px 60px;
+    font-size: 20px;
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.menu-btn:hover {
+    background: #333;
+    transform: translateY(-2px);
+}
+
+.action-btn {
+    margin-top: 30px;
+    padding: 12px 40px;
+    font-size: 18px;
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.action-btn:disabled {
+    background: #999;
+    cursor: not-allowed;
+}
+
+.action-btn:not(:disabled):hover {
+    background: #333;
+}
+
+/* 选择武将样式 */
+.select-container {
+    width: 100%;
+    max-width: 800px;
+    padding: 20px;
+}
+
+.select-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 0 10px;
+}
+
+#select-title {
+    font-size: 28px;
+    font-weight: 600;
+}
+
+#select-count {
+    font-size: 18px;
+    color: #666;
+}
+
+.generals-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+    width: 100%;
+}
+
+.general-card {
+    aspect-ratio: 3/4;
+    background: #fff;
+    border: 2px solid #ccc;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 10px;
+    transition: all 0.2s;
+}
+
+.general-card:hover {
+    border-color: #888;
+}
+
+.general-card.selected {
+    border-color: #1a1a1a;
+    background: #f0f0f0;
+}
+
+.general-icon {
+    font-size: 36px;
+    margin-bottom: 8px;
+}
+
+.general-name {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* 棋盘样式 */
+.deploy-container, .battle-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+}
+
+.deploy-header, .battle-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 0 10px;
+}
+
+#deploy-title, #turn-info {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+#deploy-count {
+    font-size: 18px;
+    color: #666;
+}
+
+.end-btn {
+    padding: 8px 24px;
+    font-size: 16px;
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.end-btn:hover {
+    background: #333;
+}
+
+.board-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    grid-template-rows: repeat(10, 1fr);
+    gap: 2px;
+    background: #888;
+    border: 3px solid #555;
+    width: min(90vw, 90vh);
+    height: min(90vw, 90vh);
+    max-width: 600px;
+    max-height: 600px;
+}
+
+.cell {
+    background: #f5f2eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.cell.grass { background: #f5f2eb; }
+.cell.mountain { background: #a08070; }
+.cell.river { background: #8ab4f8; }
+.cell.city { background: #d4b06a; }
+.cell.swamp { background: #85a385; }
+
+.cell.deploy-zone-p1 {
+    box-shadow: inset 0 0 0 2px #e53935;
+}
+
+.cell.deploy-zone-p2 {
+    box-shadow: inset 0 0 0 2px #1e88e5;
+}
+
+.cell:hover {
+    filter: brightness(0.9);
+}
+
+.cell.highlight-move {
+    background: rgba(76, 175, 80, 0.4);
+}
+
+.cell.highlight-attack {
+    background: rgba(244, 67, 54, 0.4);
+}
+
+.cell.highlight-skill {
+    background: rgba(33, 150, 243, 0.4);
+}
+
+.cell-label {
+    position: absolute;
+    font-size: 12px;
+    color: #666;
+}
+
+.cell-label.top-left { top: 2px; left: 4px; }
+.cell-label.top-right { top: 2px; right: 4px; }
+.cell-label.bottom-left { bottom: 2px; left: 4px; }
+.cell-label.bottom-right { bottom: 2px; right: 4px; }
+
+/* 单位样式 */
+.unit {
+    width: 80%;
+    height: 80%;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    position: relative;
+    z-index: 10;
+}
+
+.unit.p1 { background: #e53935; color: #fff; }
+.unit.p2 { background: #1e88e5; color: #fff; }
+.unit.selected { box-shadow: 0 0 0 3px #ffd700; }
+
+.unit-icon {
+    font-size: 20px;
+}
+
+.unit-name {
+    font-size: 9px;
+    margin-top: 2px;
+}
+
+.unit-hp {
+    position: absolute;
+    bottom: 2px;
+    left: 10%;
+    width: 80%;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.unit-hp-fill {
+    height: 100%;
+    background: #4caf50;
+    transition: width 0.3s;
+}
+
+/* 布阵迷你武将 */
+.deploy-generals {
+    margin-top: 15px;
+    padding: 10px;
+}
+
+.mini-generals {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.mini-general {
+    padding: 10px 16px;
+    background: #fff;
+    border: 2px dashed #ccc;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mini-general.active {
+    border-color: #1a1a1a;
+    border-style: solid;
+}
+
+.mini-general.deployed {
+    opacity: 0.3;
+}
+
+/* 战斗面板 */
+.panel {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: #fff;
+    border: 2px solid #1a1a1a;
+    padding: 15px;
+    min-width: 180px;
+    max-width: 250px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.panel-name {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.panel-stats {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.skill-btn {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    margin-top: 6px;
+    background: #fff;
+    border: 2px solid #1a1a1a;
+    color: #1a1a1a;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.skill-btn:hover:not(:disabled) {
+    background: #1a1a1a;
+    color: #fff;
+}
+
+.skill-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* 日志 */
+.log {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    max-width: 220px;
+    text-align: right;
+}
+
+.log-entry {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+/* 结算 */
+.gameover-container {
+    text-align: center;
+}
+
+#winner-text {
+    font-size: 48px;
+    font-weight: 700;
+    margin-bottom: 40px;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+    .title { font-size: 36px; }
+    .generals-grid { grid-template-columns: repeat(3, 1fr); }
+    #select-title { font-size: 22px; }
+    .board { width: 95vw; height: 95vw; }
+    .unit-icon { font-size: 16px; }
+    .unit-name { font-size: 7px; }
+    .panel { position: static; margin-top: 10px; }
+    .log { display: none; }
+}
