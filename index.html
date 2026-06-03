@@ -52,15 +52,27 @@
         <!-- 战斗界面 -->
         <div id="battle-screen" class="screen">
             <div class="battle-container">
-                <div class="battle-header">
-                    <span id="turn-info">第1回合 红方</span>
-                    <button id="end-turn" class="end-btn">结束回合</button>
+                <!-- 顶栏 - 蓝方武将 -->
+                <div class="player-bar player-bar-top" id="player2-bar">
+                    <div class="player-label">蓝方</div>
+                    <div class="generals-bar" id="player2-generals"></div>
                 </div>
-                <div class="board-wrapper">
-                    <div id="battle-board" class="board"></div>
+                
+                <div class="battle-middle">
+                    <div class="battle-header">
+                        <span id="turn-info">第1回合 红方</span>
+                        <button id="end-turn" class="end-btn">结束回合</button>
+                    </div>
+                    <div class="board-wrapper">
+                        <div id="battle-board" class="board"></div>
+                    </div>
                 </div>
-                <div id="unit-panel" class="panel"></div>
-                <div id="log-panel" class="log"></div>
+                
+                <!-- 底栏 - 红方武将 -->
+                <div class="player-bar player-bar-bottom" id="player1-bar">
+                    <div class="generals-bar" id="player1-generals"></div>
+                    <div class="player-label">红方</div>
+                </div>
             </div>
         </div>
 
@@ -69,6 +81,16 @@
             <div class="gameover-container">
                 <h1 id="winner-text">红方 胜利！</h1>
                 <button id="restart-btn" class="action-btn">再来一局</button>
+            </div>
+        </div>
+
+        <!-- 详细信息面板 -->
+        <div id="detail-panel" class="detail-panel hidden">
+            <div class="detail-content">
+                <button id="close-detail" class="close-btn">×</button>
+                <div id="detail-name" class="detail-name"></div>
+                <div id="detail-stats" class="detail-stats"></div>
+                <div id="detail-skills" class="detail-skills"></div>
             </div>
         </div>
     </div>

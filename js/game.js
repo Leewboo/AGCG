@@ -131,11 +131,7 @@ const GENERALS = [
         id: 'guanyu', name: '关羽', hp: 100, atk: 25, def: 15, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
-            {
-                id: 'dragon', name: '青龙偃月', type: 'active', category: 'normal', range: '+2', spCost: 30,
-                content(attacker, target, gameState) { return Effect.damage(attacker, target, 35); },
-                desc: '十字2格，造成35伤害'
-            },
+            { id: 'dragon', name: '青龙偃月', type: 'active', category: 'normal', range: '+2', spCost: 30, content(a,t) { return Effect.damage(a,t,35); }, desc: '十字2格，造成35伤害' },
             { id: 'warrior', name: '武圣', type: 'passive', category: 'special', content(a) { a.atk = Math.floor(a.atk * 1.1); }, desc: '攻击力+10%' }
         ]
     },
@@ -143,76 +139,57 @@ const GENERALS = [
         id: 'zhugeliang', name: '诸葛亮', hp: 70, atk: 20, def: 10, mov: 2,
         moveRange: '+2', attackRange: '+2',
         skills: [
-            {
-                id: 'fire', name: '火烧赤壁', type: 'active', category: 'normal', range: 'r2', spCost: 35,
-                content(a, t) { return Effect.damage(a, t, 28); }, desc: '圆形2格，造成28伤害'
-            },
-            {
-                id: 'summonArcher', name: '借东风', type: 'active', category: 'summon', range: '+1', spCost: 40, summon: 'archer',
-                content(a, pos, gs) { return Effect.summon(a, SUMMONS.archer, pos.x, pos.y, gs); }, desc: '召唤弓手'
-            }
+            { id: 'fire', name: '火烧赤壁', type: 'active', category: 'normal', range: 'r2', spCost: 35, content(a,t) { return Effect.damage(a,t,28); }, desc: '圆形2格，造成28伤害' },
+            { id: 'summonArcher', name: '借东风', type: 'active', category: 'summon', range: '+1', spCost: 40, summon: 'archer', content(a,pos,gs) { return Effect.summon(a,SUMMONS.archer,pos.x,pos.y,gs); }, desc: '召唤弓手' }
         ]
     },
     {
         id: 'zhaoyun', name: '赵云', hp: 85, atk: 22, def: 12, mov: 4,
         moveRange: '+4', attackRange: '+1',
-        skills: [
-            { id: 'spear', name: '龙胆枪', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a, t) { return Effect.damage(a, t, 30); }, desc: '十字3格，30伤害' }
-        ]
+        skills: [{ id: 'spear', name: '龙胆枪', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a,t) { return Effect.damage(a,t,30); }, desc: '十字3格，30伤害' }]
     },
     {
         id: 'zhangfei', name: '张飞', hp: 110, atk: 28, def: 18, mov: 2,
         moveRange: '+2', attackRange: '+1',
-        skills: [
-            { id: 'roar', name: '狮吼功', type: 'active', category: 'normal', range: 'r1', spCost: 35, content(a, t) { return Effect.damage(a, t, 40); }, desc: '周围1格，40伤害' }
-        ]
+        skills: [{ id: 'roar', name: '狮吼功', type: 'active', category: 'normal', range: 'r1', spCost: 35, content(a,t) { return Effect.damage(a,t,40); }, desc: '周围1格，40伤害' }]
     },
     {
         id: 'huangzhong', name: '黄忠', hp: 75, atk: 26, def: 8, mov: 2,
         moveRange: '+2', attackRange: '+3',
-        skills: [
-            { id: 'arrow', name: '百步穿杨', type: 'active', category: 'normal', range: '+4', spCost: 30, content(a, t) { return Effect.damage(a, t, 32); }, desc: '十字4格，32伤害' }
-        ]
+        skills: [{ id: 'arrow', name: '百步穿杨', type: 'active', category: 'normal', range: '+4', spCost: 30, content(a,t) { return Effect.damage(a,t,32); }, desc: '十字4格，32伤害' }]
     },
     {
         id: 'machao', name: '马超', hp: 90, atk: 24, def: 10, mov: 4,
         moveRange: '+4', attackRange: '+1',
-        skills: [
-            { id: 'charge', name: '铁骑冲锋', type: 'active', category: 'normal', range: '+3', spCost: 28, content(a, t) { return Effect.damage(a, t, 33); }, desc: '十字3格，33伤害' }
-        ]
+        skills: [{ id: 'charge', name: '铁骑冲锋', type: 'active', category: 'normal', range: '+3', spCost: 28, content(a,t) { return Effect.damage(a,t,33); }, desc: '十字3格，33伤害' }]
     },
     {
         id: 'caocao', name: '曹操', hp: 95, atk: 22, def: 14, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
-            { id: 'strategy', name: '奸雄之计', type: 'active', category: 'normal', range: 'r2', spCost: 30, content(a, t) { return Effect.damage(a, t, 25); }, desc: '圆形2格，25伤害' },
-            {
-                id: 'ambition', name: '挟天子', type: 'active', category: 'special', range: 'r1', spCost: 35,
-                content(a, t) { const d = Effect.damage(a, t, 20); Effect.heal(a, a, 15); return { ...d, heal: 15 }; }, desc: '吸血：20伤害 +15治疗'
-            }
+            { id: 'strategy', name: '奸雄之计', type: 'active', category: 'normal', range: 'r2', spCost: 30, content(a,t) { return Effect.damage(a,t,25); }, desc: '圆形2格，25伤害' },
+            { id: 'ambition', name: '挟天子', type: 'active', category: 'special', range: 'r1', spCost: 35, content(a,t) { const d = Effect.damage(a,t,20); Effect.heal(a,a,15); return { ...d, heal: 15 }; }, desc: '吸血：20伤害 +15治疗' }
         ]
     },
     {
         id: 'caoren', name: '曹仁', hp: 105, atk: 18, def: 22, mov: 2,
         moveRange: '+2', attackRange: '+1',
         skills: [
-            { id: 'defend', name: '铜墙铁壁', type: 'active', category: 'normal', range: '+1', spCost: 20, content(a, t) { Effect.buffDef(a, a, 10, 2); return Effect.damage(a, t, 20); }, desc: '自身防御+10，攻击' },
-            { id: 'summonWall', name: '筑城', type: 'active', category: 'summon', range: '+1', spCost: 45, summon: 'wall', content(a, pos, gs) { return Effect.summon(a, SUMMONS.wall, pos.x, pos.y, gs); }, desc: '召唤盾墙' }
+            { id: 'defend', name: '铜墙铁壁', type: 'active', category: 'normal', range: '+1', spCost: 20, content(a,t) { Effect.buffDef(a,a,10,2); return Effect.damage(a,t,20); }, desc: '自身防御+10，攻击' },
+            { id: 'summonWall', name: '筑城', type: 'active', category: 'summon', range: '+1', spCost: 45, summon: 'wall', content(a,pos,gs) { return Effect.summon(a,SUMMONS.wall,pos.x,pos.y,gs); }, desc: '召唤盾墙' }
         ]
     },
     {
         id: 'sunce', name: '孙策', hp: 88, atk: 25, def: 11, mov: 3,
         moveRange: '+3', attackRange: '+1',
-        skills: [
-            { id: 'assault', name: '霸王突袭', type: 'active', category: 'normal', range: '+2', spCost: 30, content(a, t) { return Effect.damage(a, t, 35); }, desc: '十字2格，35伤害' }
-        ]
+        skills: [{ id: 'assault', name: '霸王突袭', type: 'active', category: 'normal', range: '+2', spCost: 30, content(a,t) { return Effect.damage(a,t,35); }, desc: '十字2格，35伤害' }]
     },
     {
         id: 'sunshangxiang', name: '孙尚香', hp: 72, atk: 23, def: 9, mov: 3,
         moveRange: '+3', attackRange: '+2',
         skills: [
-            { id: 'bow', name: '枭姬弓', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a, t) { return Effect.damage(a, t, 28); }, desc: '十字3格，28伤害' },
-            { id: 'summonSoldier', name: '练兵', type: 'active', category: 'summon', range: '+1', spCost: 25, summon: 'soldier', content(a, pos, gs) { return Effect.summon(a, SUMMONS.soldier, pos.x, pos.y, gs); }, desc: '召唤士兵' }
+            { id: 'bow', name: '枭姬弓', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a,t) { return Effect.damage(a,t,28); }, desc: '十字3格，28伤害' },
+            { id: 'summonSoldier', name: '练兵', type: 'active', category: 'summon', range: '+1', spCost: 25, summon: 'soldier', content(a,pos,gs) { return Effect.summon(a,SUMMONS.soldier,pos.x,pos.y,gs); }, desc: '召唤士兵' }
         ]
     }
 ];
@@ -259,6 +236,10 @@ const Game = {
         document.getElementById('confirm-select').onclick = () => this.confirmSelect();
         document.getElementById('end-turn').onclick = () => this.endTurn();
         document.getElementById('restart-btn').onclick = () => this.resetGame();
+        document.getElementById('close-detail').onclick = () => this.hideDetail();
+        document.getElementById('detail-panel').onclick = (e) => {
+            if (e.target.id === 'detail-panel') this.hideDetail();
+        };
     },
 
     startSelect() {
@@ -284,9 +265,7 @@ const Game = {
             const isSelected = selected.find(s => s.id === g.id);
             const isOpponentSelected = this.state.players[this.state.currentPlayer === 1 ? 2 : 1].generals.find(s => s.id === g.id);
             return `
-                <div class="general-card ${isSelected ? 'selected' : ''}" 
-                     data-id="${g.id}" 
-                     style="opacity: ${isOpponentSelected ? '0.2' : '1'}">
+                <div class="general-card ${isSelected ? 'selected' : ''}" data-id="${g.id}" style="opacity: ${isOpponentSelected ? '0.2' : '1'}">
                     <div class="general-icon">${g.name[0]}</div>
                     <div class="general-name">${g.name}</div>
                 </div>
@@ -437,6 +416,7 @@ const Game = {
         const unit = {
             id: Date.now() + Math.random(),
             generalId: general.id,
+            generalData: general,
             name: general.name,
             player: player,
             x, y,
@@ -479,6 +459,7 @@ const Game = {
             const unit = {
                 id: Date.now() + i + Math.random(),
                 generalId: g.id,
+                generalData: g,
                 name: g.name,
                 player: 2,
                 x: pos.x, y: pos.y,
@@ -517,7 +498,7 @@ const Game = {
     renderBattle() {
         const info = document.getElementById('turn-info');
         const board = document.getElementById('battle-board');
-        const panel = document.getElementById('unit-panel');
+        const panel = document.getElementById('panel');
         const log = document.getElementById('log-panel');
 
         info.textContent = `第${this.state.turn}回合 ${this.state.currentPlayer === 1 ? '红方' : '蓝方'}`;
@@ -566,12 +547,14 @@ const Game = {
             }
         }
 
+        this.renderPlayerBars();
+
         if (this.state.selectedUnit) {
             const u = this.state.selectedUnit;
             const activeSkills = u.skills ? u.skills.filter(s => s.type === 'active') : [];
             panel.innerHTML = `
-                <div class="panel-name">${u.name}</div>
-                <div class="panel-stats">
+                <div class="detail-name">${u.name}</div>
+                <div class="detail-stats">
                     HP: ${u.hp}/${u.maxHp} | SP: ${u.sp}/${u.maxSp}<br>
                     攻: ${u.atk} | 防: ${u.def} | 移: ${u.mov}
                 </div>
@@ -592,7 +575,83 @@ const Game = {
             panel.innerHTML = '';
         }
 
-        log.innerHTML = this.state.logs.slice(-8).map(l => `<div class="log-entry">${l}</div>`).join('');
+        if (log) log.innerHTML = this.state.logs.slice(-8).map(l => `<div class="log-entry">${l}</div>`).join('');
+    },
+
+    renderPlayerBars() {
+        const p1Bar = document.getElementById('player1-generals');
+        const p2Bar = document.getElementById('player2-generals');
+
+        const renderBar = (player, container) => {
+            const units = this.state.units.filter(u => u.player === player && u.generalId);
+            container.innerHTML = units.map(u => {
+                const hpPercent = (u.hp / u.maxHp * 100).toFixed(0);
+                return `
+                    <div class="bar-general ${u.dead ? 'dead' : ''} p${player}" data-unit-id="${u.id}">
+                        <span class="bar-general-name">${u.name}</span>
+                        <div class="bar-general-hp">
+                            <div class="bar-general-hp-fill" style="width: ${hpPercent}%"></div>
+                        </div>
+                        <span class="bar-general-info" data-unit-id="${u.id}">i</span>
+                    </div>
+                `;
+            }).join('');
+
+            container.querySelectorAll('.bar-general-info').forEach(el => {
+                el.onclick = (e) => {
+                    e.stopPropagation();
+                    const unitId = e.currentTarget.dataset.unitId;
+                    const unit = this.state.units.find(u => u.id == unitId);
+                    if (unit) this.showDetail(unit);
+                };
+            });
+
+            container.querySelectorAll('.bar-general').forEach(el => {
+                el.onclick = (e) => {
+                    const unitId = e.currentTarget.dataset.unitId;
+                    const unit = this.state.units.find(u => u.id == unitId);
+                    if (unit && !unit.dead && unit.player === this.state.currentPlayer) {
+                        this.state.selectedUnit = unit;
+                        this.state.currentSkill = null;
+                        this.showMoves(unit);
+                        this.renderBattle();
+                    }
+                };
+            });
+        };
+
+        renderBar(1, p1Bar);
+        renderBar(2, p2Bar);
+    },
+
+    showDetail(unit) {
+        const panel = document.getElementById('detail-panel');
+        const nameEl = document.getElementById('detail-name');
+        const statsEl = document.getElementById('detail-stats');
+        const skillsEl = document.getElementById('detail-skills');
+
+        nameEl.textContent = unit.name;
+        statsEl.innerHTML = `
+            HP: ${unit.hp}/${unit.maxHp}<br>
+            SP: ${unit.sp}/${unit.maxSp}<br>
+            攻击: ${unit.atk}<br>
+            防御: ${unit.def}<br>
+            移动: ${unit.mov}
+        `;
+
+        const skills = unit.skills || [];
+        skillsEl.innerHTML = skills.map(s => `
+            <div class="skill-item">
+                <div class="skill-name">${s.name} ${s.type === 'passive' ? '(被动)' : ''} - ${s.spCost ? `SP:${s.spCost}` : ''}</div>
+                <div class="skill-desc">${s.desc}</div>
+            </div>
+        `).join('') || '<div>无技能</div>';
+
+        panel.classList.remove('hidden');
+    },
+
+    hideDetail() {
+        document.getElementById('detail-panel').classList.add('hidden');
     },
 
     renderUnit(unit) {
@@ -807,8 +866,8 @@ const Game = {
     },
 
     checkWin() {
-        const p1Alive = this.state.units.filter(u => u.player === 1 && !u.dead).length;
-        const p2Alive = this.state.units.filter(u => u.player === 2 && !u.dead).length;
+        const p1Alive = this.state.units.filter(u => u.player === 1 && !u.dead && u.generalId).length;
+        const p2Alive = this.state.units.filter(u => u.player === 2 && !u.dead && u.generalId).length;
         if (p1Alive === 0) this.endGame(2);
         else if (p2Alive === 0) this.endGame(1);
     },
