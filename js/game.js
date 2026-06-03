@@ -15,7 +15,8 @@ const state = {
 
 function show(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
+    const el = document.getElementById(id);
+    if (el) el.classList.add('active');
 }
 
 function log(msg) {
@@ -26,24 +27,90 @@ function log(msg) {
     }
 }
 
-// 菜单
-document.querySelectorAll('#menu .btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        state.mode = btn.dataset.mode;
-        state.player = 1;
-        state.players[1].generals = [];
-        state.players[2].generals = [];
-        renderSelect();
-        show('select');
-    });
+document.addEventListener('DOMContentLoaded', () => {
+    initEvents();
 });
 
-// 选将
+function initEvents() {
+    // 菜单
+    const menuBtns = document.querySelectorAll('#menu .btn');
+    menuBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            state.mode = btn.dataset.mode;
+            state.player = 1;
+            state.players[1].generals = [];
+            state.players[2].generals = [];
+            renderSelect();
+            show('select');
+        });
+    });
+
+    // 选将确认
+    const confirmBtn = document.getElementById('select-confirm');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', () => {
+            if (state.player === 1 && state.players[2].generals.length === 0) {
+                state.player = 2;
+                renderSelect();
+            } else {
+                initBoard();
+                state.player = 1;
+                renderDeploy();
+                show('deploy');
+            }
+        });
+    }
+
+    // 结束回合
+    const endBtn = document.getElementById('end-turn');
+    if (endBtn) {
+        endBtn.addEventListener('click', () => {
+            state.units.forEach(u => { u.moved = false; u.attacked = false; u.usedSkill = false; u.sp = Math.min(u.maxSp, u.sp + 20); });
+            state.selected = null;
+            state.highlights = [];
+            state.currentSkill = null;
+            if (state.player === 2) {
+                state.player = 1;
+                state.turn++;
+            } else {
+                state.player = 2;
+                if (state.mode === 'pve') {
+                    aiTurn();
+                }
+            }
+            log((state.player === 1 ? '红方' : '蓝方') + '回合');
+            renderBattle();
+        });
+    }
+
+    // 重新开始
+    const restartBtn = document.getElementById('restart');
+    if (restartBtn) {
+        restartBtn.addEventListener('click', () => {
+            state.view = 'menu';
+            state.mode = null;
+            state.player = 1;
+            state.turn = 1;
+            state.board = null;
+            state.units = [];
+            state.selected = null;
+            state.selectedGeneral = null;
+            state.players = { 1: { generals: [], deployed: [] }, 2: { generals: [], deployed: [] } };
+            state.highlights = [];
+            state.currentSkill = null;
+            state.logs = [];
+            show('menu');
+        });
+    }
+}
+
 function renderSelect() {
     const list = document.getElementById('general-list');
     const title = document.getElementById('select-title');
     const count = document.getElementById('select-count');
     const confirm = document.getElementById('select-confirm');
+
+    if (!list || !title || !count || !confirm) return;
 
     title.textContent = (state.player === 1 ? '红方' : '蓝方') + '选将';
     const sel = state.players[state.player].generals;
@@ -74,19 +141,6 @@ function renderSelect() {
     });
 }
 
-document.getElementById('select-confirm').addEventListener('click', () => {
-    if (state.player === 1 && state.players[2].generals.length === 0) {
-        state.player = 2;
-        renderSelect();
-    } else {
-        initBoard();
-        state.player = 1;
-        renderDeploy();
-        show('deploy');
-    }
-});
-
-// 棋盘
 function initBoard() {
     state.board = [];
     for (let y = 0; y < 8; y++) {
@@ -110,11 +164,12 @@ function getUnit(x, y) {
     return state.units.find(u => u.x === x && u.y === y && !u.dead);
 }
 
-// 布阵
 function renderDeploy() {
     const board = document.getElementById('board');
     const title = document.getElementById('deploy-title');
     const panel = document.getElementById('deploy-list');
+
+    if (!board || !title || !panel) return;
 
     title.textContent = (state.player === 1 ? '红方' : '蓝方') + '布阵 ' + state.players[state.player].deployed.length + '/5';
 
@@ -169,6 +224,8 @@ function renderDeploy() {
         });
     });
 
+    const gens = state.players[state.player].generals;
+    const dep = state.players[state.player].deployed;
     panel.innerHTML = gens.map(g => {
         const done = dep.find(d => d.id === g.id);
         return `<div class="mini-card ${done ? '' : 'active'}">${g.icon} ${g.name}</div>`;
@@ -183,7 +240,6 @@ function renderUnit(u) {
     </div>`;
 }
 
-// 对战
 function startBattle() {
     state.view = 'battle';
     state.player = 1;
@@ -200,6 +256,8 @@ function renderBattle() {
     const board = document.getElementById('battle-board');
     const info = document.getElementById('turn-info');
     const panel = document.getElementById('unit-panel');
+
+    if (!board || !info || !panel) return;
 
     info.textContent = `第${state.turn}回合 ${state.player === 1 ? '红方' : '蓝方'}`;
 
@@ -374,30 +432,9 @@ function checkWin() {
     }
 }
 
-// 结束回合
-document.getElementById('end-turn').addEventListener('click', () => {
-    state.units.forEach(u => { u.moved = false; u.attacked = false; u.usedSkill = false; u.sp = Math.min(u.maxSp, u.sp + 20); });
-    state.selected = null;
-    state.highlights = [];
-    state.currentSkill = null;
-    if (state.player === 2) {
-        state.player = 1;
-        state.turn++;
-    } else {
-        state.player = 2;
-        if (state.mode === 'pve') {
-            aiTurn();
-        }
-    }
-    log((state.player === 1 ? '红方' : '蓝方') + '回合');
-    renderBattle();
-});
-
-// AI
 function aiTurn() {
     const units = state.units.filter(u => u.player === 2 && !u.dead);
     units.forEach(u => {
-        // 找最近的敌人
         const enemies = state.units.filter(e => e.player === 1 && !e.dead);
         if (enemies.length === 0) return;
         let target = enemies[0];
@@ -407,7 +444,6 @@ function aiTurn() {
             if (d < minDist) { minDist = d; target = e; }
         });
 
-        // 移动靠近
         if (!u.moved && minDist > 1) {
             const dx = Math.sign(target.x - u.x);
             const dy = Math.sign(target.y - u.y);
@@ -418,7 +454,6 @@ function aiTurn() {
             }
         }
 
-        // 攻击
         const dist = Math.abs(target.x - u.x) + Math.abs(target.y - u.y);
         if (dist <= 1 && !u.attacked) {
             const dmg = Math.max(1, Math.floor(u.atk - target.def / 2));
@@ -437,20 +472,3 @@ function aiTurn() {
         renderBattle();
     }, 500);
 }
-
-// 重新开始
-document.getElementById('restart').addEventListener('click', () => {
-    state.view = 'menu';
-    state.mode = null;
-    state.player = 1;
-    state.turn = 1;
-    state.board = null;
-    state.units = [];
-    state.selected = null;
-    state.selectedGeneral = null;
-    state.players = { 1: { generals: [], deployed: [] }, 2: { generals: [], deployed: [] } };
-    state.highlights = [];
-    state.currentSkill = null;
-    state.logs = [];
-    show('menu');
-});
