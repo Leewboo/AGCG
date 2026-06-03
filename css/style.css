@@ -163,6 +163,56 @@ html, body {
     padding: 8px 10px;
 }
 
+.battle-main {
+    flex: 1;
+    display: flex;
+    gap: 12px;
+    min-height: 0;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.side-panel {
+    width: 220px;
+    min-height: 100px;
+    max-height: 100%;
+    overflow-y: auto;
+    background: #e8e4d8;
+    border: 3px solid #666;
+    padding: 10px;
+}
+
+.skill-btn {
+    display: block;
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 8px;
+    font-size: 14px;
+    background: #fff;
+    border: 2px solid #000;
+    cursor: pointer;
+    text-align: left;
+}
+
+.skill-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.log-panel {
+    height: 80px;
+    overflow-y: auto;
+    background: #e8e4d8;
+    border: 3px solid #666;
+    padding: 6px 10px;
+    font-size: 13px;
+    margin-top: 8px;
+}
+
+.log-entry {
+    margin-bottom: 2px;
+}
+
 #turn-info {
     font-size: 22px;
     font-weight: bold;

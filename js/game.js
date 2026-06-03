@@ -346,27 +346,12 @@ const Game = {
                 cell.dataset.x = x;
                 cell.dataset.y = y;
 
-                if (x === 0) {
-                    const label = document.createElement('span');
-                    label.className = 'cell-label top-left';
-                    label.textContent = y;
-                    cell.appendChild(label);
-                }
-                if (y === 9) {
-                    const label = document.createElement('span');
-                    label.className = 'cell-label bottom-left';
-                    label.textContent = x;
-                    cell.appendChild(label);
-                }
-                if (terrainLabel) {
-                    const label = document.createElement('span');
-                    label.className = 'terrain-label';
-                    label.textContent = terrainLabel;
-                    label.style.fontSize = '24px';
-                    label.style.opacity = '0.7';
-                    cell.appendChild(label);
-                }
-                if (unit) cell.innerHTML += this.renderUnit(unit);
+                let cellHtml = '';
+                if (x === 0) cellHtml += `<span class="cell-label top-left">${y}</span>`;
+                if (y === 9) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
+                if (terrainLabel) cellHtml += `<span class="terrain-label" style="font-size:24px;opacity:0.7">${terrainLabel}</span>`;
+                if (unit) cellHtml += this.renderUnit(unit);
+                cell.innerHTML = cellHtml;
 
                 cell.onclick = () => this.handleDeployClick(x, y);
                 board.appendChild(cell);
@@ -512,78 +497,67 @@ const Game = {
         const panel = document.getElementById('panel');
         const log = document.getElementById('log-panel');
 
-        info.textContent = `第${this.state.turn}回合 ${this.state.currentPlayer === 1 ? '红方' : '蓝方'}`;
+        if (info) info.textContent = `第${this.state.turn}回合 ${this.state.currentPlayer === 1 ? '红方' : '蓝方'}`;
 
-        board.innerHTML = '';
-        for (let y = 0; y < 10; y++) {
-            for (let x = 0; x < 10; x++) {
-                const terrainId = TERRAIN[y][x];
-                const terrain = TERRAIN_NAMES[terrainId];
-                const terrainLabel = TERRAIN_LABELS[terrainId];
-                const unit = this.getUnit(x, y);
-                const hl = this.state.highlights.find(h => h.x === x && h.y === y);
+        if (board) {
+            board.innerHTML = '';
+            for (let y = 0; y < 10; y++) {
+                for (let x = 0; x < 10; x++) {
+                    const terrainId = TERRAIN[y][x];
+                    const terrain = TERRAIN_NAMES[terrainId];
+                    const terrainLabel = TERRAIN_LABELS[terrainId];
+                    const unit = this.getUnit(x, y);
+                    const hl = this.state.highlights.find(h => h.x === x && h.y === y);
 
-                let cellClass = `cell ${terrain}`;
-                if (hl) cellClass += ` highlight-${hl.type}`;
+                    let cellClass = `cell ${terrain}`;
+                    if (hl) cellClass += ` highlight-${hl.type}`;
 
-                const cell = document.createElement('div');
-                cell.className = cellClass;
-                cell.dataset.x = x;
-                cell.dataset.y = y;
+                    const cell = document.createElement('div');
+                    cell.className = cellClass;
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
 
-                if (x === 0) {
-                    const label = document.createElement('span');
-                    label.className = 'cell-label top-left';
-                    label.textContent = y;
-                    cell.appendChild(label);
+                    let cellHtml = '';
+                    if (x === 0) cellHtml += `<span class="cell-label top-left">${y}</span>`;
+                    if (y === 9) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
+                    if (terrainLabel) cellHtml += `<span class="terrain-label" style="font-size:24px;opacity:0.7">${terrainLabel}</span>`;
+                    if (unit) cellHtml += this.renderUnit(unit);
+                    cell.innerHTML = cellHtml;
+
+                    cell.onclick = () => this.handleBattleClick(x, y);
+                    board.appendChild(cell);
                 }
-                if (y === 9) {
-                    const label = document.createElement('span');
-                    label.className = 'cell-label bottom-left';
-                    label.textContent = x;
-                    cell.appendChild(label);
-                }
-                if (terrainLabel) {
-                    const label = document.createElement('span');
-                    label.className = 'terrain-label';
-                    label.textContent = terrainLabel;
-                    label.style.fontSize = '24px';
-                    label.style.opacity = '0.7';
-                    cell.appendChild(label);
-                }
-                if (unit) cell.innerHTML += this.renderUnit(unit);
-
-                cell.onclick = () => this.handleBattleClick(x, y);
-                board.appendChild(cell);
             }
         }
 
         this.renderPlayerBars();
 
-        if (this.state.selectedUnit) {
-            const u = this.state.selectedUnit;
-            const activeSkills = u.skills ? u.skills.filter(s => s.type === 'active') : [];
-            panel.innerHTML = `
-                <div class="detail-name">${u.name}</div>
-                <div class="detail-stats">
-                    HP: ${u.hp}/${u.maxHp} | SP: ${u.sp}/${u.maxSp}<br>
-                    攻: ${u.atk} | 防: ${u.def} | 移: ${u.mov}
-                </div>
-                ${activeSkills.map(s => {
-                    const canUse = u.sp >= s.spCost && !u.usedSkill;
-                    return `<button class="skill-btn" data-skill="${s.id}" ${!canUse ? 'disabled' : ''}>${s.name}(${s.spCost}) - ${s.desc}</button>`;
-                }).join('')}
-            `;
-            panel.querySelectorAll('.skill-btn').forEach(btn => {
-                btn.onclick = (e) => {
-                    e.stopPropagation();
-                    const sid = e.currentTarget.dataset.skill;
-                    const skill = u.skills.find(s => s.id === sid);
-                    if (u.sp >= skill.spCost && !u.usedSkill) this.selectSkill(skill);
-                };
-            });
-        } else {
-            panel.innerHTML = '';
+        if (panel) {
+            if (this.state.selectedUnit) {
+                const u = this.state.selectedUnit;
+                const activeSkills = u.skills ? u.skills.filter(s => s.type === 'active') : [];
+                panel.innerHTML = `
+                    <div class="detail-name">${u.name}</div>
+                    <div class="detail-stats">
+                        HP: ${u.hp}/${u.maxHp} | SP: ${u.sp}/${u.maxSp}<br>
+                        攻: ${u.atk} | 防: ${u.def} | 移: ${u.mov}
+                    </div>
+                    ${activeSkills.map(s => {
+                        const canUse = u.sp >= s.spCost && !u.usedSkill;
+                        return `<button class="skill-btn" data-skill="${s.id}" ${!canUse ? 'disabled' : ''}>${s.name}(${s.spCost}) - ${s.desc}</button>`;
+                    }).join('')}
+                `;
+                panel.querySelectorAll('.skill-btn').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        const sid = e.currentTarget.dataset.skill;
+                        const skill = u.skills.find(s => s.id === sid);
+                        if (u.sp >= skill.spCost && !u.usedSkill) this.selectSkill(skill);
+                    };
+                });
+            } else {
+                panel.innerHTML = '';
+            }
         }
 
         if (log) log.innerHTML = this.state.logs.slice(-8).map(l => `<div class="log-entry">${l}</div>`).join('');
@@ -592,6 +566,7 @@ const Game = {
     renderPlayerBars() {
         const p1Bar = document.getElementById('player1-generals');
         const p2Bar = document.getElementById('player2-generals');
+        if (!p1Bar || !p2Bar) return;
 
         const renderBar = (player, container) => {
             const units = this.state.units.filter(u => u.player === player && u.generalId);
