@@ -102,12 +102,7 @@ html, body {
 
 .menu-btn:hover {
     background: #333;
-    transform: translateY(-2px);
     box-shadow: var(--shadow-md);
-}
-
-.menu-btn:active {
-    transform: translateY(0);
 }
 
 .action-btn {
@@ -169,7 +164,8 @@ html, body {
 .general-card {
     aspect-ratio: 3/4;
     background: var(--bg-secondary);
-    border: 2px solid var(--border-color);
+    border: 3px solid transparent;
+    box-shadow: 0 0 0 2px var(--border-color);
     border-radius: 6px;
     display: flex;
     flex-direction: column;
@@ -178,20 +174,15 @@ html, body {
     cursor: pointer;
     padding: 0.6rem;
     transition: all var(--transition-fast);
-    box-shadow: var(--shadow-sm);
 }
 
 .general-card:hover:not(.selected) {
-    border-color: #888;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 0 0 2px #888, var(--shadow-md);
 }
 
 .general-card.selected {
-    border-color: #1a1a1a;
-    border-width: 3px;
     background: #f0f0f0;
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 0 0 3px #1a1a1a, var(--shadow-md);
 }
 
 .general-icon {
@@ -365,7 +356,6 @@ html, body {
 }
 .unit.selected { 
     box-shadow: 0 0 0 3px #ffd700, var(--shadow-md);
-    transform: scale(1.05);
 }
 
 .unit-icon {
@@ -418,14 +408,12 @@ html, body {
     font-weight: 500;
     cursor: pointer;
     transition: all var(--transition-fast);
-    box-shadow: var(--shadow-sm);
 }
 
 .mini-general.active {
     border-color: #1a1a1a;
     border-style: solid;
     background: #f0f0f0;
-    box-shadow: var(--shadow-md);
 }
 
 .mini-general.deployed {
