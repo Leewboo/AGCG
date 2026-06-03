@@ -183,21 +183,21 @@ html, body {
     align-items: center;
     justify-content: center;
     min-height: 0;
+    padding: 10px;
 }
 
 .board {
     display: grid;
-    grid-template-columns: repeat(10, 1fr);
-    grid-template-rows: repeat(10, 1fr);
+    grid-template-columns: repeat(10, 48px);
+    grid-template-rows: repeat(10, 48px);
     gap: 2px;
     background: #888;
     border: 3px solid #666;
-    width: min(90vw, 90vh);
-    aspect-ratio: 1 / 1;
-    max-width: 600px;
 }
 
 .cell {
+    width: 48px;
+    height: 48px;
     background: #f0ebe0;
     display: flex;
     align-items: center;
@@ -205,7 +205,6 @@ html, body {
     position: relative;
     cursor: pointer;
     font-size: 24px;
-    aspect-ratio: 1 / 1;
 }
 
 .cell.grass { background: #f0ebe0; }
@@ -286,7 +285,6 @@ html, body {
 .unit.selected {
     border-color: #40a040;
     border-width: 4px;
-    box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 4px #40a040;
 }
 
 .unit-icon {
@@ -424,9 +422,15 @@ html, body {
     .title { font-size: 36px; }
     .generals-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
     #select-title { font-size: 20px; }
-    .board { width: 96vw; height: 96vw; }
+    .board { grid-template-columns: repeat(10, 36px); grid-template-rows: repeat(10, 36px); }
+    .cell { width: 36px; height: 36px; font-size: 18px; }
     .unit-icon { font-size: 18px; }
     .unit-name { font-size: 8px; }
     .panel { position: static; margin-top: 10px; width: 90%; max-width: none; }
     .log { display: none; }
+}
+
+@media (max-width: 480px) {
+    .board { grid-template-columns: repeat(10, 32px); grid-template-rows: repeat(10, 32px); }
+    .cell { width: 32px; height: 32px; font-size: 14px; }
 }
