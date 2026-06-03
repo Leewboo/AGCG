@@ -1,7 +1,228 @@
+
+// ================================
+// 范围系统定义
+// ================================
+const Range = {
+    plus(n, x, y) {
+        const result = [];
+        for (let i = 1; i <= n; i++) {
+            result.push({ x: x + i, y });
+            result.push({ x: x - i, y });
+            result.push({ x, y: y + i });
+            result.push({ x, y: y - i });
+        }
+        return result.filter(p => p.x >= 0 && p.x < 10 && p.y >= 0 && p.y < 10);
+    },
+    x(n, x, y) {
+        const result = [];
+        for (let i = 1; i <= n; i++) {
+            result.push({ x: x + i, y: y + i });
+            result.push({ x: x - i, y: y + i });
+            result.push({ x: x + i, y: y - i });
+            result.push({ x: x - i, y: y - i });
+        }
+        return result.filter(p => p.x >= 0 && p.x < 10 && p.y >= 0 && p.y < 10);
+    },
+    r(n, x, y) {
+        const result = [];
+        for (let dy = -n; dy <= n; dy++) {
+            for (let dx = -n; dx <= n; dx++) {
+                if (dx === 0 && dy === 0) continue;
+                if (Math.abs(dx) + Math.abs(dy) <= n) {
+                    result.push({ x: x + dx, y: y + dy });
+                }
+            }
+        }
+        return result.filter(p => p.x >= 0 && p.x < 10 && p.y >= 0 && p.y < 10);
+    },
+    parse(rangeStr, x, y) {
+        const match = rangeStr.match(/^([+xr])(\d+)$/);
+        if (!match) return [];
+        const type = match[1];
+        const n = parseInt(match[2]);
+        if (type === '+') return this.plus(n, x, y);
+        if (type === 'x') return this.x(n, x, y);
+        if (type === 'r') return this.r(n, x, y);
+        return [];
+    }
+};
+
+// ================================
+// 效果系统定义
+// ================================
+const Effect = {
+    damage(attacker, target, damage) {
+        const realDamage = Math.max(1, Math.floor(damage - target.def * 0.3));
+        target.hp -= realDamage;
+        if (target.hp <= 0) {
+            target.hp = 0;
+            target.dead = true;
+        }
+        return { damage: realDamage, type: 'damage' };
+    },
+    heal(healer, target, amount) {
+        const healAmount = Math.min(amount, target.maxHp - target.hp);
+        target.hp += healAmount;
+        return { heal: healAmount, type: 'heal' };
+    },
+    buffAtk(user, target, amount, turns = 3) {
+        if (!target.buffs) target.buffs = [];
+        target.buffs.push({ stat: 'atk', value: amount, turns });
+        target.atk += amount;
+        return { buff: 'atk', value: amount, turns, type: 'buff' };
+    },
+    buffDef(user, target, amount, turns = 3) {
+        if (!target.buffs) target.buffs = [];
+        target.buffs.push({ stat: 'def', value: amount, turns });
+        target.def += amount;
+        return { buff: 'def', value: amount, turns, type: 'buff' };
+    },
+    summon(summoner, summonData, x, y, gameState) {
+        const unit = {
+            id: Date.now() + Math.random(),
+            name: summonData.name,
+            player: summoner.player,
+            x, y,
+            hp: summonData.hp,
+            maxHp: summonData.hp,
+            atk: summonData.atk,
+            def: summonData.def,
+            mov: summonData.mov,
+            moveRange: '+' + summonData.mov,
+            attackRange: '+1',
+            sp: 100,
+            maxSp: 100,
+            skills: [],
+            dead: false,
+            moved: false,
+            attacked: false,
+            usedSkill: false,
+            isSummon: true
+        };
+        gameState.units.push(unit);
+        return { unit, type: 'summon' };
+    }
+};
+
+// ================================
+// 游戏数据
+// ================================
+const TERRAIN = [
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
+    [0, 0, 3, 0, 0, 0, 0, 3, 0, 0],
+    [2, 0, 0, 1, 0, 0, 1, 0, 0, 2],
+    [2, 0, 4, 0, 0, 0, 0, 0, 0, 2],
+    [2, 0, 0, 0, 0, 0, 0, 4, 0, 2],
+    [2, 0, 0, 1, 0, 0, 1, 0, 0, 2],
+    [0, 0, 3, 0, 0, 0, 0, 3, 0, 0],
+    [0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+];
+const TERRAIN_NAMES = { 0: 'grass', 1: 'mountain', 2: 'river', 3: 'city', 4: 'swamp' };
+const TERRAIN_LABELS = { 0: '', 1: '山', 2: '～', 3: '城', 4: '沼' };
+const SUMMONS = {
+    soldier: { name: '士兵', hp: 40, atk: 8, def: 5, mov: 2 },
+    archer: { name: '弓手', hp: 30, atk: 12, def: 3, mov: 2 },
+    wall: { name: '盾墙', hp: 80, atk: 0, def: 20, mov: 0 }
+};
+const GENERALS = [
+    {
+        id: 'guanyu', name: '关羽', hp: 100, atk: 25, def: 15, mov: 3,
+        moveRange: '+3', attackRange: '+1',
+        skills: [
+            {
+                id: 'dragon', name: '青龙偃月', type: 'active', category: 'normal', range: '+2', spCost: 30,
+                content(attacker, target, gameState) { return Effect.damage(attacker, target, 35); },
+                desc: '十字2格，造成35伤害'
+            },
+            { id: 'warrior', name: '武圣', type: 'passive', category: 'special', content(a) { a.atk = Math.floor(a.atk * 1.1); }, desc: '攻击力+10%' }
+        ]
+    },
+    {
+        id: 'zhugeliang', name: '诸葛亮', hp: 70, atk: 20, def: 10, mov: 2,
+        moveRange: '+2', attackRange: '+2',
+        skills: [
+            {
+                id: 'fire', name: '火烧赤壁', type: 'active', category: 'normal', range: 'r2', spCost: 35,
+                content(a, t) { return Effect.damage(a, t, 28); }, desc: '圆形2格，造成28伤害'
+            },
+            {
+                id: 'summonArcher', name: '借东风', type: 'active', category: 'summon', range: '+1', spCost: 40, summon: 'archer',
+                content(a, pos, gs) { return Effect.summon(a, SUMMONS.archer, pos.x, pos.y, gs); }, desc: '召唤弓手'
+            }
+        ]
+    },
+    {
+        id: 'zhaoyun', name: '赵云', hp: 85, atk: 22, def: 12, mov: 4,
+        moveRange: '+4', attackRange: '+1',
+        skills: [
+            { id: 'spear', name: '龙胆枪', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a, t) { return Effect.damage(a, t, 30); }, desc: '十字3格，30伤害' }
+        ]
+    },
+    {
+        id: 'zhangfei', name: '张飞', hp: 110, atk: 28, def: 18, mov: 2,
+        moveRange: '+2', attackRange: '+1',
+        skills: [
+            { id: 'roar', name: '狮吼功', type: 'active', category: 'normal', range: 'r1', spCost: 35, content(a, t) { return Effect.damage(a, t, 40); }, desc: '周围1格，40伤害' }
+        ]
+    },
+    {
+        id: 'huangzhong', name: '黄忠', hp: 75, atk: 26, def: 8, mov: 2,
+        moveRange: '+2', attackRange: '+3',
+        skills: [
+            { id: 'arrow', name: '百步穿杨', type: 'active', category: 'normal', range: '+4', spCost: 30, content(a, t) { return Effect.damage(a, t, 32); }, desc: '十字4格，32伤害' }
+        ]
+    },
+    {
+        id: 'machao', name: '马超', hp: 90, atk: 24, def: 10, mov: 4,
+        moveRange: '+4', attackRange: '+1',
+        skills: [
+            { id: 'charge', name: '铁骑冲锋', type: 'active', category: 'normal', range: '+3', spCost: 28, content(a, t) { return Effect.damage(a, t, 33); }, desc: '十字3格，33伤害' }
+        ]
+    },
+    {
+        id: 'caocao', name: '曹操', hp: 95, atk: 22, def: 14, mov: 3,
+        moveRange: '+3', attackRange: '+1',
+        skills: [
+            { id: 'strategy', name: '奸雄之计', type: 'active', category: 'normal', range: 'r2', spCost: 30, content(a, t) { return Effect.damage(a, t, 25); }, desc: '圆形2格，25伤害' },
+            {
+                id: 'ambition', name: '挟天子', type: 'active', category: 'special', range: 'r1', spCost: 35,
+                content(a, t) { const d = Effect.damage(a, t, 20); Effect.heal(a, a, 15); return { ...d, heal: 15 }; }, desc: '吸血：20伤害 +15治疗'
+            }
+        ]
+    },
+    {
+        id: 'caoren', name: '曹仁', hp: 105, atk: 18, def: 22, mov: 2,
+        moveRange: '+2', attackRange: '+1',
+        skills: [
+            { id: 'defend', name: '铜墙铁壁', type: 'active', category: 'normal', range: '+1', spCost: 20, content(a, t) { Effect.buffDef(a, a, 10, 2); return Effect.damage(a, t, 20); }, desc: '自身防御+10，攻击' },
+            { id: 'summonWall', name: '筑城', type: 'active', category: 'summon', range: '+1', spCost: 45, summon: 'wall', content(a, pos, gs) { return Effect.summon(a, SUMMONS.wall, pos.x, pos.y, gs); }, desc: '召唤盾墙' }
+        ]
+    },
+    {
+        id: 'sunce', name: '孙策', hp: 88, atk: 25, def: 11, mov: 3,
+        moveRange: '+3', attackRange: '+1',
+        skills: [
+            { id: 'assault', name: '霸王突袭', type: 'active', category: 'normal', range: '+2', spCost: 30, content(a, t) { return Effect.damage(a, t, 35); }, desc: '十字2格，35伤害' }
+        ]
+    },
+    {
+        id: 'sunshangxiang', name: '孙尚香', hp: 72, atk: 23, def: 9, mov: 3,
+        moveRange: '+3', attackRange: '+2',
+        skills: [
+            { id: 'bow', name: '枭姬弓', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a, t) { return Effect.damage(a, t, 28); }, desc: '十字3格，28伤害' },
+            { id: 'summonSoldier', name: '练兵', type: 'active', category: 'summon', range: '+1', spCost: 25, summon: 'soldier', content(a, pos, gs) { return Effect.summon(a, SUMMONS.soldier, pos.x, pos.y, gs); }, desc: '召唤士兵' }
+        ]
+    }
+];
+
+// ================================
+// 游戏逻辑
+// ================================
 const Game = {
     state: {
         mode: 'pvp',
-        screen: 'menu',
         currentPlayer: 1,
         turn: 1,
         selectedUnit: null,
@@ -21,7 +242,6 @@ const Game = {
     },
 
     showScreen(screenId) {
-        this.state.screen = screenId;
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(`${screenId}-screen`).classList.add('active');
     },
@@ -35,9 +255,7 @@ const Game = {
             this.state.mode = 'pve';
             this.startSelect();
         };
-        document.getElementById('custom-btn').onclick = () => {
-            alert('DIY武将功能即将开放！');
-        };
+        document.getElementById('custom-btn').onclick = () => alert('DIY武将功能即将开放！');
         document.getElementById('confirm-select').onclick = () => this.confirmSelect();
         document.getElementById('end-turn').onclick = () => this.endTurn();
         document.getElementById('restart-btn').onclick = () => this.resetGame();
@@ -62,12 +280,12 @@ const Game = {
         count.textContent = `${selected.length}/5`;
         confirm.disabled = selected.length < 5;
 
-        list.innerHTML = GAME_DATA.GENERALS.map(g => {
+        list.innerHTML = GENERALS.map(g => {
             const isSelected = selected.find(s => s.id === g.id);
             const isOpponentSelected = this.state.players[this.state.currentPlayer === 1 ? 2 : 1].generals.find(s => s.id === g.id);
             return `
                 <div class="general-card ${isSelected ? 'selected' : ''}" 
-                     data-id="${g.id}"
+                     data-id="${g.id}" 
                      style="opacity: ${isOpponentSelected ? '0.2' : '1'}">
                     <div class="general-icon">${g.name[0]}</div>
                     <div class="general-name">${g.name}</div>
@@ -81,9 +299,9 @@ const Game = {
                 const opponentSelected = this.state.players[this.state.currentPlayer === 1 ? 2 : 1].generals.find(s => s.id === id);
                 if (opponentSelected) return;
                 const generals = this.state.players[this.state.currentPlayer].generals;
-                const idx = generals.findIndex(g => g.id === id);
+                const idx = generals.findIndex(gg => gg.id === id);
                 if (idx >= 0) generals.splice(idx, 1);
-                else if (generals.length < 5) generals.push({ ...GAME_DATA.GENERALS.find(g => g.id === id) });
+                else if (generals.length < 5) generals.push({ ...GENERALS.find(gg => gg.id === id) });
                 this.renderSelect();
             };
         });
@@ -92,21 +310,20 @@ const Game = {
     confirmSelect() {
         if (this.state.currentPlayer === 1) {
             this.state.currentPlayer = 2;
-            if (this.state.mode === 'pve') this.selectAI();
-            else this.renderSelect();
+            if (this.state.mode === 'pve') {
+                const available = GENERALS.filter(g => !this.state.players[1].generals.find(p => p.id === g.id));
+                for (let i = 0; i < 5; i++) {
+                    const idx = Math.floor(Math.random() * available.length);
+                    this.state.players[2].generals.push({ ...available[idx] });
+                    available.splice(idx, 1);
+                }
+                this.startDeploy();
+            } else {
+                this.renderSelect();
+            }
         } else {
             this.startDeploy();
         }
-    },
-
-    selectAI() {
-        const available = GAME_DATA.GENERALS.filter(g => !this.state.players[1].generals.find(p => p.id === g.id));
-        for (let i = 0; i < 5; i++) {
-            const idx = Math.floor(Math.random() * available.length);
-            this.state.players[2].generals.push({ ...available[idx] });
-            available.splice(idx, 1);
-        }
-        this.startDeploy();
     },
 
     startDeploy() {
@@ -136,9 +353,9 @@ const Game = {
         board.innerHTML = '';
         for (let y = 0; y < 10; y++) {
             for (let x = 0; x < 10; x++) {
-                const terrainId = GAME_DATA.TERRAIN[y][x];
-                const terrain = GAME_DATA.TERRAIN_NAMES[terrainId];
-                const terrainLabel = GAME_DATA.TERRAIN_LABELS[terrainId];
+                const terrainId = TERRAIN[y][x];
+                const terrain = TERRAIN_NAMES[terrainId];
+                const terrainLabel = TERRAIN_LABELS[terrainId];
                 const unit = this.getUnit(x, y);
 
                 let cellClass = `cell ${terrain}`;
@@ -166,9 +383,12 @@ const Game = {
                     const label = document.createElement('span');
                     label.className = 'terrain-label';
                     label.textContent = terrainLabel;
+                    label.style.fontSize = '24px';
+                    label.style.opacity = '0.7';
                     cell.appendChild(label);
                 }
                 if (unit) cell.innerHTML += this.renderUnit(unit);
+
                 cell.onclick = () => this.handleDeployClick(x, y);
                 board.appendChild(cell);
             }
@@ -201,7 +421,6 @@ const Game = {
 
         const generals = this.state.players[player].generals;
         const deployed = this.state.players[player].deployed;
-
         if (this.state.players[player].toDeploy === null) {
             for (let i = 0; i < 5; i++) {
                 if (!deployed.find(d => d.generalId === generals[i].id)) {
@@ -223,8 +442,10 @@ const Game = {
             x, y,
             hp: general.hp, maxHp: general.hp,
             atk: general.atk, def: general.def, mov: general.mov,
+            moveRange: general.moveRange || '+' + general.mov,
+            attackRange: general.attackRange || '+1',
             sp: 100, maxSp: 100,
-            skills: general.skills.map(s => ({ ...GAME_DATA.SKILLS[s] })),
+            skills: general.skills ? [...general.skills] : [],
             dead: false, moved: false, attacked: false, usedSkill: false
         };
         this.state.units.push(unit);
@@ -257,11 +478,16 @@ const Game = {
             available.splice(posIdx, 1);
             const unit = {
                 id: Date.now() + i + Math.random(),
-                generalId: g.id, name: g.name, player: 2,
+                generalId: g.id,
+                name: g.name,
+                player: 2,
                 x: pos.x, y: pos.y,
-                hp: g.hp, maxHp: g.hp, atk: g.atk, def: g.def, mov: g.mov,
+                hp: g.hp, maxHp: g.hp,
+                atk: g.atk, def: g.def, mov: g.mov,
+                moveRange: g.moveRange || '+' + g.mov,
+                attackRange: g.attackRange || '+1',
                 sp: 100, maxSp: 100,
-                skills: g.skills.map(s => ({ ...GAME_DATA.SKILLS[s] })),
+                skills: g.skills ? [...g.skills] : [],
                 dead: false, moved: false, attacked: false, usedSkill: false
             };
             this.state.units.push(unit);
@@ -271,6 +497,13 @@ const Game = {
     },
 
     startBattle() {
+        this.state.units.forEach(u => {
+            if (u.skills) {
+                u.skills.filter(s => s.type === 'passive').forEach(s => {
+                    if (s.content) s.content(u, this.state);
+                });
+            }
+        });
         this.state.currentPlayer = 1;
         this.state.turn = 1;
         this.state.selectedUnit = null;
@@ -292,9 +525,9 @@ const Game = {
         board.innerHTML = '';
         for (let y = 0; y < 10; y++) {
             for (let x = 0; x < 10; x++) {
-                const terrainId = GAME_DATA.TERRAIN[y][x];
-                const terrain = GAME_DATA.TERRAIN_NAMES[terrainId];
-                const terrainLabel = GAME_DATA.TERRAIN_LABELS[terrainId];
+                const terrainId = TERRAIN[y][x];
+                const terrain = TERRAIN_NAMES[terrainId];
+                const terrainLabel = TERRAIN_LABELS[terrainId];
                 const unit = this.getUnit(x, y);
                 const hl = this.state.highlights.find(h => h.x === x && h.y === y);
 
@@ -322,9 +555,12 @@ const Game = {
                     const label = document.createElement('span');
                     label.className = 'terrain-label';
                     label.textContent = terrainLabel;
+                    label.style.fontSize = '24px';
+                    label.style.opacity = '0.7';
                     cell.appendChild(label);
                 }
                 if (unit) cell.innerHTML += this.renderUnit(unit);
+
                 cell.onclick = () => this.handleBattleClick(x, y);
                 board.appendChild(cell);
             }
@@ -332,15 +568,16 @@ const Game = {
 
         if (this.state.selectedUnit) {
             const u = this.state.selectedUnit;
+            const activeSkills = u.skills ? u.skills.filter(s => s.type === 'active') : [];
             panel.innerHTML = `
                 <div class="panel-name">${u.name}</div>
                 <div class="panel-stats">
                     HP: ${u.hp}/${u.maxHp} | SP: ${u.sp}/${u.maxSp}<br>
                     攻: ${u.atk} | 防: ${u.def} | 移: ${u.mov}
                 </div>
-                ${u.skills.map(s => {
+                ${activeSkills.map(s => {
                     const canUse = u.sp >= s.spCost && !u.usedSkill;
-                    return `<button class="skill-btn" data-skill="${s.id}" ${!canUse ? 'disabled' : ''}>${s.name}(${s.spCost})</button>`;
+                    return `<button class="skill-btn" data-skill="${s.id}" ${!canUse ? 'disabled' : ''}>${s.name}(${s.spCost}) - ${s.desc}</button>`;
                 }).join('')}
             `;
             panel.querySelectorAll('.skill-btn').forEach(btn => {
@@ -389,7 +626,7 @@ const Game = {
         }
 
         if (hlAttack && this.state.selectedUnit && unit && unit.player !== this.state.selectedUnit.player) {
-            const damage = Math.max(1, Math.floor(this.state.selectedUnit.atk - unit.def / 2));
+            const damage = Math.max(1, Math.floor(this.state.selectedUnit.atk - unit.def * 0.3));
             unit.hp -= damage;
             if (unit.hp <= 0) {
                 unit.dead = true;
@@ -405,17 +642,24 @@ const Game = {
             return;
         }
 
-        if (hlSkill && this.state.selectedUnit && this.state.currentSkill && unit && unit.player !== this.state.selectedUnit.player) {
+        if (hlSkill && this.state.selectedUnit && this.state.currentSkill) {
             const skill = this.state.currentSkill;
             this.state.selectedUnit.sp -= skill.spCost;
-            const damage = Math.max(1, Math.floor(skill.damage));
-            unit.hp -= damage;
-            if (unit.hp <= 0) {
-                unit.dead = true;
-                unit.hp = 0;
-                this.state.logs.push(`${this.state.selectedUnit.name} ${skill.name} 击杀 ${unit.name}`);
-            } else {
-                this.state.logs.push(`${this.state.selectedUnit.name} ${skill.name} -${damage}`);
+            if (skill.category === 'summon') {
+                if (!this.getUnit(x, y)) {
+                    skill.content(this.state.selectedUnit, { x, y }, this.state);
+                    this.state.logs.push(`${this.state.selectedUnit.name} 召唤 ${SUMMONS[skill.summon].name}`);
+                }
+            } else if (unit && unit.player !== this.state.selectedUnit.player) {
+                const result = skill.content(this.state.selectedUnit, unit, this.state);
+                if (result.type === 'damage') {
+                    if (unit.dead) this.state.logs.push(`${this.state.selectedUnit.name} 击杀 ${unit.name}`);
+                    else this.state.logs.push(`${this.state.selectedUnit.name} ${skill.name} ${unit.name} -${result.damage}`);
+                } else if (result.heal) {
+                    this.state.logs.push(`${this.state.selectedUnit.name} ${skill.name} 治疗${result.heal}`);
+                } else if (result.type === 'summon') {
+                    this.state.logs.push(`${this.state.selectedUnit.name} 召唤 ${result.unit.name}`);
+                }
             }
             this.state.selectedUnit.usedSkill = true;
             this.state.currentSkill = null;
@@ -444,20 +688,18 @@ const Game = {
         this.state.currentSkill = skill;
         this.state.highlights = [];
         const u = this.state.selectedUnit;
-        const range = skill.rangeValue;
-
-        for (let dy = -range; dy <= range; dy++) {
-            for (let dx = -range; dx <= range; dx++) {
-                let inRange = skill.range === 'cross'
-                    ? (Math.abs(dx) + Math.abs(dy) <= range && (dx !== 0 || dy !== 0))
-                    : (Math.abs(dx) + Math.abs(dy) <= range && (dx !== 0 || dy !== 0));
-                if (!inRange) continue;
-                const nx = u.x + dx, ny = u.y + dy;
-                const target = this.getUnit(nx, ny);
+        const range = Range.parse(skill.range, u.x, u.y);
+        if (skill.category === 'summon') {
+            range.forEach(p => {
+                if (!this.getUnit(p.x, p.y)) this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
+            });
+        } else {
+            range.forEach(p => {
+                const target = this.getUnit(p.x, p.y);
                 if (target && target.player !== u.player) {
-                    this.state.highlights.push({ x: nx, y: ny, type: 'skill' });
+                    this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
                 }
-            }
+            });
         }
         this.renderBattle();
     },
@@ -465,29 +707,21 @@ const Game = {
     showMoves(unit) {
         this.state.highlights = [];
         if (!unit.moved) {
-            for (let dy = -unit.mov; dy <= unit.mov; dy++) {
-                for (let dx = -unit.mov; dx <= unit.mov; dx++) {
-                    if (Math.abs(dx) + Math.abs(dy) <= unit.mov && (dx !== 0 || dy !== 0)) {
-                        const nx = unit.x + dx, ny = unit.y + dy;
-                        if (nx >= 0 && nx < 10 && ny >= 0 && ny < 10 && !this.getUnit(nx, ny)) {
-                            this.state.highlights.push({ x: nx, y: ny, type: 'move' });
-                        }
-                    }
+            const moveRange = Range.parse(unit.moveRange || '+' + unit.mov, unit.x, unit.y);
+            moveRange.forEach(p => {
+                if (!this.getUnit(p.x, p.y)) {
+                    this.state.highlights.push({ x: p.x, y: p.y, type: 'move' });
                 }
-            }
+            });
         }
         if (!unit.attacked) {
-            for (let dy = -1; dy <= 1; dy++) {
-                for (let dx = -1; dx <= 1; dx++) {
-                    if (Math.abs(dx) + Math.abs(dy) <= 1 && (dx !== 0 || dy !== 0)) {
-                        const nx = unit.x + dx, ny = unit.y + dy;
-                        const target = this.getUnit(nx, ny);
-                        if (target && target.player !== unit.player) {
-                            this.state.highlights.push({ x: nx, y: ny, type: 'attack' });
-                        }
-                    }
+            const attackRange = Range.parse(unit.attackRange || '+1', unit.x, unit.y);
+            attackRange.forEach(p => {
+                const target = this.getUnit(p.x, p.y);
+                if (target && target.player !== unit.player) {
+                    this.state.highlights.push({ x: p.x, y: p.y, type: 'attack' });
                 }
-            }
+            });
         }
     },
 
@@ -499,6 +733,15 @@ const Game = {
         this.state.units.forEach(u => {
             u.moved = false; u.attacked = false; u.usedSkill = false;
             u.sp = Math.min(u.maxSp, u.sp + 20);
+            if (u.buffs) {
+                const newBuffs = [];
+                u.buffs.forEach(b => {
+                    b.turns--;
+                    if (b.turns > 0) newBuffs.push(b);
+                    else u[b.stat] -= b.value;
+                });
+                u.buffs = newBuffs;
+            }
         });
         this.state.selectedUnit = null;
         this.state.currentSkill = null;
@@ -539,16 +782,14 @@ const Game = {
                 const ny = unit.y + (dy !== 0 ? dy : 0);
                 if (nx >= 0 && nx < 10 && ny >= 0 && ny < 10 && !this.getUnit(nx, ny)) {
                     unit.x = nx; unit.y = ny; unit.moved = true;
-                    this.state.logs.push(`${unit.name} 移动`);
                 }
             }
 
             const newDist = Math.abs(target.x - unit.x) + Math.abs(target.y - unit.y);
             if (newDist <= 1 && !unit.attacked) {
-                const damage = Math.max(1, Math.floor(unit.atk - target.def / 2));
+                const damage = Math.max(1, Math.floor(unit.atk - target.def * 0.3));
                 target.hp -= damage;
-                if (target.hp <= 0) { target.dead = true; target.hp = 0; this.state.logs.push(`AI ${unit.name} 击杀 ${target.name}`); }
-                else this.state.logs.push(`AI ${unit.name} 攻击 ${target.name} -${damage}`);
+                if (target.hp <= 0) { target.dead = true; target.hp = 0; }
                 unit.attacked = true;
             }
         });
@@ -580,9 +821,18 @@ const Game = {
 
     resetGame() {
         this.state = {
-            mode: 'pvp', screen: 'menu', currentPlayer: 1, turn: 1,
-            selectedUnit: null, currentSkill: null, highlights: [], logs: [], units: [],
-            players: { 1: { generals: [], deployed: [], toDeploy: null }, 2: { generals: [], deployed: [], toDeploy: null } }
+            mode: 'pvp',
+            currentPlayer: 1,
+            turn: 1,
+            selectedUnit: null,
+            currentSkill: null,
+            highlights: [],
+            logs: [],
+            units: [],
+            players: {
+                1: { generals: [], deployed: [], toDeploy: null },
+                2: { generals: [], deployed: [], toDeploy: null }
+            }
         };
         this.showScreen('menu');
     },
