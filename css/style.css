@@ -343,6 +343,9 @@ html, body {
     font-weight: bold;
     line-height: 1;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .unit-hp {
@@ -604,10 +607,47 @@ html, body {
     .cell { width: 36px; height: 36px; font-size: 18px; }
     .unit-icon { font-size: 16px; }
     .bar-general-name { font-size: 12px; }
+    .side-panel { width: 180px; }
 }
 
 @media (max-width: 480px) {
     .board { grid-template-columns: repeat(10, 32px); grid-template-rows: repeat(10, 32px); }
     .cell { width: 32px; height: 32px; font-size: 14px; }
     .unit-icon { font-size: 14px; }
+    .battle-main { gap: 6px; }
+    .side-panel { width: 140px; padding: 6px; }
+    .skill-btn { font-size: 12px; padding: 6px; }
+    .player-label { font-size: 14px; min-width: 40px; }
+    .bar-general { padding: 3px 5px; gap: 3px; }
+    .bar-general-name { font-size: 11px; }
+    .bar-general-hp { width: 30px; }
+}
+
+@media (max-width: 400px) {
+    .board { grid-template-columns: repeat(10, 28px); grid-template-rows: repeat(10, 28px); gap: 1px; }
+    .cell { width: 28px; height: 28px; font-size: 12px; }
+    .unit-icon { font-size: 11px; }
+    .side-panel { width: 110px; padding: 4px; }
+    .skill-btn { font-size: 11px; padding: 4px; margin-bottom: 4px; }
+    .player-label { font-size: 12px; min-width: 36px; }
+    .bar-general-name { font-size: 10px; }
+    .log-panel { height: 60px; font-size: 11px; }
+}
+
+/* 手机竖屏：面板放到底部 */
+@media (max-width: 600px) {
+    .battle-main {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+    .side-panel {
+        width: 100%;
+        max-width: 320px;
+        max-height: 120px;
+        order: 2;
+    }
+    .board-wrapper {
+        order: 1;
+    }
 }
