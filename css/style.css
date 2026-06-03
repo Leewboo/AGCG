@@ -168,18 +168,20 @@ html, body {
     display: flex;
     gap: 12px;
     min-height: 0;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
 .side-panel {
     width: 220px;
-    min-height: 100px;
+    height: auto;
     max-height: 100%;
     overflow-y: auto;
     background: #e8e4d8;
     border: 3px solid #666;
     padding: 10px;
+    flex-shrink: 0;
 }
 
 .skill-btn {
@@ -365,6 +367,7 @@ html, body {
     padding: 8px 12px;
     background: #e0d8c8;
     border-bottom: 3px solid #666;
+    flex-shrink: 0;
 }
 
 .player-bar-bottom {
