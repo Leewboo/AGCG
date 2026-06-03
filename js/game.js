@@ -35,15 +35,28 @@ const Range = {
         }
         return result.filter(p => p.x >= 0 && p.x < 10 && p.y >= 0 && p.y < 10);
     },
-    parse(rangeStr, x, y) {
-        const match = rangeStr.match(/^([+xr])(\d+)$/);
-        if (!match) return [];
-        const type = match[1];
-        const n = parseInt(match[2]);
-        if (type === '+') return this.plus(n, x, y);
-        if (type === 'x') return this.x(n, x, y);
-        if (type === 'r') return this.r(n, x, y);
-        return [];
+    parse(rangeInput, x, y) {
+        const ranges = Array.isArray(rangeInput) ? rangeInput : [rangeInput];
+        const result = [];
+        const seen = new Set();
+        for (const rangeStr of ranges) {
+            const match = String(rangeStr).match(/^([+xr])(\d+)$/);
+            if (!match) continue;
+            const type = match[1];
+            const n = parseInt(match[2]);
+            let pts = [];
+            if (type === '+') pts = this.plus(n, x, y);
+            else if (type === 'x') pts = this.x(n, x, y);
+            else if (type === 'r') pts = this.r(n, x, y);
+            for (const p of pts) {
+                const key = `${p.x},${p.y}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    result.push(p);
+                }
+            }
+        }
+        return result;
     }
 };
 
@@ -145,7 +158,7 @@ const GENERALS = [
     },
     {
         id: 'zhaoyun', name: '赵云', hp: 85, atk: 22, def: 12, mov: 4,
-        moveRange: '+4', attackRange: '+1',
+        moveRange: '+4', attackRange: ['+1','x1'],
         skills: [{ id: 'spear', name: '龙胆枪', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a,t) { return Effect.damage(a,t,30); }, desc: '十字3格，30伤害' }]
     },
     {
@@ -186,7 +199,7 @@ const GENERALS = [
     },
     {
         id: 'sunshangxiang', name: '孙尚香', hp: 72, atk: 23, def: 9, mov: 3,
-        moveRange: '+3', attackRange: '+2',
+        moveRange: '+3', attackRange: ['+2','x2'],
         skills: [
             { id: 'bow', name: '枭姬弓', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a,t) { return Effect.damage(a,t,28); }, desc: '十字3格，28伤害' },
             { id: 'summonSoldier', name: '练兵', type: 'active', category: 'summon', range: '+1', spCost: 25, summon: 'soldier', content(a,pos,gs) { return Effect.summon(a,SUMMONS.soldier,pos.x,pos.y,gs); }, desc: '召唤士兵' }
@@ -531,6 +544,7 @@ const Game = {
         }
 
         this.renderPlayerBars();
+        this.renderSelectedInfo();
 
         if (panel) {
             if (this.state.selectedUnit) {
@@ -561,6 +575,47 @@ const Game = {
         }
 
         if (log) log.innerHTML = this.state.logs.slice(-8).map(l => `<div class="log-entry">${l}</div>`).join('');
+    },
+
+    renderSelectedInfo() {
+        const container = document.getElementById('selected-info');
+        if (!container) return;
+        const u = this.state.selectedUnit;
+        if (!u) {
+            container.classList.add('hidden');
+            return;
+        }
+        container.classList.remove('hidden');
+        const hpPercent = (u.hp / u.maxHp * 100).toFixed(0);
+        const skills = u.skills || [];
+        const activeSkills = skills.filter(s => s.type === 'active');
+        const passiveSkills = skills.filter(s => s.type === 'passive');
+        container.innerHTML = `
+            <div class="sel-info-left">
+                <span class="sel-info-name p${u.player}">${u.name}</span>
+                <div class="sel-info-hp"><div class="sel-info-hp-fill" style="width:${hpPercent}%"></div></div>
+                <span class="sel-info-stat">HP:${u.hp}/${u.maxHp}</span>
+                <span class="sel-info-stat">SP:${u.sp}/${u.maxSp}</span>
+                <span class="sel-info-stat">攻:${u.atk}</span>
+                <span class="sel-info-stat">防:${u.def}</span>
+                <span class="sel-info-stat">移:${u.mov}</span>
+            </div>
+            <div class="sel-info-skills">
+                ${activeSkills.map(s => {
+                    const canUse = u.sp >= s.spCost && !u.usedSkill;
+                    return `<button class="sel-skill-btn ${!canUse ? 'disabled' : ''}" data-skill="${s.id}">${s.name}(${s.spCost})</button>`;
+                }).join('')}
+                ${passiveSkills.map(s => `<span class="sel-passive">${s.name}</span>`).join('')}
+            </div>
+        `;
+        container.querySelectorAll('.sel-skill-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const sid = e.currentTarget.dataset.skill;
+                const skill = u.skills.find(s => s.id === sid);
+                if (skill && u.sp >= skill.spCost && !u.usedSkill) this.selectSkill(skill);
+            };
+        });
     },
 
     renderPlayerBars() {
