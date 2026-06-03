@@ -600,8 +600,7 @@ const Game = {
         const isSelected = this.state.selectedUnit && this.state.selectedUnit.id === unit.id;
         return `
             <div class="unit p${unit.player} ${isSelected ? 'selected' : ''}">
-                <div class="unit-icon">${unit.name[0]}</div>
-                <div class="unit-name">${unit.name}</div>
+                <div class="unit-icon">${unit.name}</div>
                 <div class="unit-hp">
                     <div class="unit-hp-fill" style="width: ${hpPercent}%"></div>
                 </div>
