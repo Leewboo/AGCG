@@ -400,18 +400,26 @@ const Game = {
 
         const generals = this.state.players[player].generals;
         const deployed = this.state.players[player].deployed;
-        if (this.state.players[player].toDeploy === null) {
+        
+        // 首先使用用户选中的，如果没有选中就自动找第一个未部署的
+        let generalIdx = this.state.players[player].toDeploy;
+        if (generalIdx === null) {
             for (let i = 0; i < 5; i++) {
                 if (!deployed.find(d => d.generalId === generals[i].id)) {
-                    this.state.players[player].toDeploy = i;
+                    generalIdx = i;
                     break;
                 }
             }
-            if (this.state.players[player].toDeploy === null) return;
         }
-
-        const general = generals[this.state.players[player].toDeploy];
-        if (deployed.find(d => d.generalId === general.id)) return;
+        // 如果没有可部署的武将，直接返回
+        if (generalIdx === null || generalIdx === -1) return;
+        
+        // 确保选中的武将还没有被部署
+        if (deployed.find(d => d.generalId === generals[generalIdx].id)) {
+            return;
+        }
+        
+        const general = generals[generalIdx];
 
         const unit = {
             id: Date.now() + Math.random(),
@@ -435,8 +443,11 @@ const Game = {
         if (deployed.length === 5) {
             if (player === 1) {
                 this.state.currentPlayer = 2;
-                if (this.state.mode === 'pve') this.deployAI();
-                else this.renderDeploy();
+                if (this.state.mode === 'pve') {
+                    this.deployAI();
+                } else {
+                    this.renderDeploy();
+                }
             } else {
                 this.startBattle();
             }
