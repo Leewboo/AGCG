@@ -1083,11 +1083,9 @@ const Game = {
             this.state.turn++;
             this.state.currentPlayer = 1;
             this.state.logs.push(`第${this.state.turn}回合 红方`);
-            this.showTurnBanner(`第${this.state.turn}回合 红方`);
         } else {
             this.state.currentPlayer = 2;
             this.state.logs.push('蓝方回合');
-            this.showTurnBanner('蓝方回合');
         }
 
         if (this.state.mode === 'pve' && this.state.currentPlayer === 2) {
