@@ -1,4 +1,4 @@
-import { Range } from './range.js';
+import { Range as RangeLib } from './range.js';
 import { Effect } from './effect.js';
 import {
     BOARD_SIZE, TERRAIN, TERRAIN_NAMES, TERRAIN_LABELS,
@@ -29,7 +29,7 @@ const Game = {
 
     init() {
         // 把 Range 挂载到 gameState 供 Effect 使用
-        this.state._modules = { Range };
+        this.state._modules = { Range: RangeLib };
         this.bindEvents();
         this.showScreen('menu');
     },
@@ -592,7 +592,7 @@ const Game = {
             }
 
             // 验证落点是否在目标周围范围内且为空
-            const landingRange = Range.parse(skill.step2Range || 'r2', target.x, target.y);
+            const landingRange = RangeLib.parse(skill.step2Range || 'r2', target.x, target.y);
             const valid = landingRange.find(p => p.x === x && p.y === y);
             if (!valid || this.getUnit(x, y)) {
                 this.state.logs.push('无效的落点');
@@ -604,17 +604,29 @@ const Game = {
             const result = skill.content(attacker, target, this.state, { x, y });
 
             // 显示效果
+            let extraActionGranted = false;
             this.addHitAnimation(target);
             if (target.dead) {
                 this.state.logs.push(`${attacker.name} 胆勇击杀 ${target.name}`);
                 this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
                 this.addDeathAnimation(target);
+                attacker.energy += ENERGY_ON_KILL;
+                this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_KILL}能量`, 'heal');
+                if (attacker._passive_changSheng && target.generalId) {
+                    extraActionGranted = true;
+                }
             } else {
                 this.state.logs.push(`${attacker.name} 胆勇 ${target.name} -${result.damage}`);
                 this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
             }
 
-            attacker.usedSkill = true;
+            if (extraActionGranted) {
+                Effect.grantExtraAction(attacker);
+                this.state.logs.push(`${attacker.name} 常胜！获得额外行动`);
+                this.showFloatingText(attacker.x, attacker.y, '常胜！', 'heal');
+            } else {
+                attacker.usedSkill = true;
+            }
             this.cancelSkill();
             this.checkWin();
             this.renderBattle();
@@ -637,6 +649,7 @@ const Game = {
             const attacker = this.state.selectedUnit;
             const result = Effect.damage(attacker, unit, attacker.atk);
             this.addLungeAnimation(attacker, unit);
+            let extraActionGranted = false;
             if (result.type === 'dodge') {
                 this.state.logs.push(`${unit.name} 闪避了攻击！`);
                 this.showFloatingText(unit.x, unit.y, '闪避', 'dodge');
@@ -650,9 +663,7 @@ const Game = {
                     this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_KILL}能量`, 'heal');
                     // 常胜被动
                     if (attacker._passive_changSheng && unit.generalId) {
-                        Effect.grantExtraAction(attacker);
-                        this.state.logs.push(`${attacker.name} 常胜！获得额外行动`);
-                        this.showFloatingText(attacker.x, attacker.y, '常胜！', 'heal');
+                        extraActionGranted = true;
                     }
                 } else {
                     this.state.logs.push(`${attacker.name} 攻击 ${unit.name} -${result.damage}`);
@@ -671,7 +682,13 @@ const Game = {
                     this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_HURT}能量`, 'heal');
                 }
             }
-            attacker.attacked = true;
+            if (extraActionGranted) {
+                Effect.grantExtraAction(attacker);
+                this.state.logs.push(`${attacker.name} 常胜！获得额外行动`);
+                this.showFloatingText(attacker.x, attacker.y, '常胜！', 'heal');
+            } else {
+                attacker.attacked = true;
+            }
             this.clearHighlights();
             this.checkWin();
             this.renderBattle();
@@ -690,7 +707,7 @@ const Game = {
                     this.state.skillPhase = 'step2';
                     this.state.highlights = [];
                     // 显示目标周围的可选落点
-                    const landingRange = Range.parse(skill.step2Range || 'r2', unit.x, unit.y);
+                    const landingRange = RangeLib.parse(skill.step2Range || 'r2', unit.x, unit.y);
                     landingRange.forEach(p => {
                         if (!this.getUnit(p.x, p.y)) {
                             this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
@@ -743,6 +760,7 @@ const Game = {
                     });
                 } else if (result.type === 'damage') {
                     this.addHitAnimation(unit);
+                    let extraActionGranted = false;
                     if (unit.dead) {
                         this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
@@ -750,14 +768,23 @@ const Game = {
                         attacker.energy += ENERGY_ON_KILL;
                         this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_KILL}能量`, 'heal');
                         if (attacker._passive_changSheng && unit.generalId) {
-                            Effect.grantExtraAction(attacker);
-                            this.state.logs.push(`${attacker.name} 常胜！获得额外行动`);
-                            this.showFloatingText(attacker.x, attacker.y, '常胜！', 'heal');
+                            extraActionGranted = true;
                         }
                     } else {
                         this.state.logs.push(`${attacker.name} ${skill.name} ${unit.name} -${result.damage}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
                     }
+                    if (extraActionGranted) {
+                        Effect.grantExtraAction(attacker);
+                        this.state.logs.push(`${attacker.name} 常胜！获得额外行动`);
+                        this.showFloatingText(attacker.x, attacker.y, '常胜！', 'heal');
+                    } else {
+                        attacker.usedSkill = true;
+                    }
+                    this.cancelSkill();
+                    this.checkWin();
+                    this.renderBattle();
+                    return;
                 } else if (result.type === 'poison') {
                     this.state.logs.push(`${attacker.name} 使 ${unit.name} 中毒`);
                     this.showFloatingText(unit.x, unit.y, '中毒', 'damage');
@@ -818,7 +845,7 @@ const Game = {
         // 多步技能：第一步选择目标敌人
         if (skill.step1 === 'selectEnemy') {
             this.state.skillPhase = 'step1';
-            const range = Range.parse(skill.step1Range || skill.range, u.x, u.y);
+            const range = RangeLib.parse(skill.step1Range || skill.range, u.x, u.y);
             range.forEach(p => {
                 const target = this.getUnit(p.x, p.y);
                 if (target && target.player !== u.player) {
@@ -832,7 +859,7 @@ const Game = {
 
         // 普通单步技能
         this.state.skillPhase = null;
-        const range = Range.parse(skill.range, u.x, u.y);
+        const range = RangeLib.parse(skill.range, u.x, u.y);
         if (skill.category === 'summon') {
             range.forEach(p => {
                 if (!this.getUnit(p.x, p.y)) this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
@@ -862,7 +889,7 @@ const Game = {
             if (!u.dead) blockedSet.add(`${u.x},${u.y}`);
         });
         if (!unit.moved) {
-            const moveRange = Range.parseBlocked(unit.moveRange || '+' + unit.mov, unit.x, unit.y, blockedSet);
+            const moveRange = RangeLib.parseBlocked(unit.moveRange || '+' + unit.mov, unit.x, unit.y, blockedSet);
             moveRange.forEach(p => {
                 if (!this.getUnit(p.x, p.y)) {
                     this.state.highlights.push({ x: p.x, y: p.y, type: 'move' });
@@ -870,7 +897,7 @@ const Game = {
             });
         }
         if (!unit.attacked) {
-            const attackRange = Range.parseBlocked(unit.attackRange || '+1', unit.x, unit.y, blockedSet);
+            const attackRange = RangeLib.parseBlocked(unit.attackRange || '+1', unit.x, unit.y, blockedSet);
             attackRange.forEach(p => {
                 const target = this.getUnit(p.x, p.y);
                 if (target && target.player !== unit.player) {
@@ -1041,4 +1068,7 @@ const Game = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => Game.init());
+document.addEventListener('DOMContentLoaded', () => {
+    Game.init();
+    window.Game = Game;
+});
