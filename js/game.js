@@ -65,13 +65,25 @@ const Range = {
 // ================================
 const Effect = {
     damage(attacker, target, damage) {
+        // 闪避判定
+        if (target.dodgeRate && Math.random() < target.dodgeRate) {
+            return { damage: 0, type: 'dodge' };
+        }
         const realDamage = Math.max(1, Math.floor(damage - target.def * 0.3));
         target.hp -= realDamage;
         if (target.hp <= 0) {
             target.hp = 0;
             target.dead = true;
         }
-        return { damage: realDamage, type: 'damage' };
+        // 反击判定
+        let counter = null;
+        if (target.counterRate && !target.dead && Math.random() < target.counterRate) {
+            const counterDmg = Math.max(1, Math.floor(target.atk * 0.5 - attacker.def * 0.3));
+            attacker.hp -= counterDmg;
+            if (attacker.hp <= 0) { attacker.hp = 0; attacker.dead = true; }
+            counter = counterDmg;
+        }
+        return { damage: realDamage, type: 'damage', counter };
     },
     heal(healer, target, amount) {
         const healAmount = Math.min(amount, target.maxHp - target.hp);
@@ -114,6 +126,67 @@ const Effect = {
         };
         gameState.units.push(unit);
         return { unit, type: 'summon' };
+    },
+    // AOE范围伤害：对目标及周围n格所有敌人造成伤害
+    aoeDamage(attacker, target, damage, range, gameState) {
+        const targets = gameState.units.filter(u => !u.dead && u.player !== attacker.player &&
+            Math.abs(u.x - target.x) + Math.abs(u.y - target.y) <= range);
+        let total = 0;
+        const details = [];
+        targets.forEach(enemy => {
+            const r = this.damage(attacker, enemy, damage);
+            total += r.damage;
+            details.push({ name: enemy.name, ...r });
+        });
+        return { damage: total, type: 'aoe', targets: details };
+    },
+    // 穿透伤害：沿方向对路径上所有敌人造成伤害
+    pierceDamage(attacker, target, damage, gameState) {
+        const dx = Math.sign(target.x - attacker.x);
+        const dy = Math.sign(target.y - attacker.y);
+        let total = 0;
+        const details = [];
+        for (let i = 1; i <= 10; i++) {
+            const tx = attacker.x + dx * i, ty = attacker.y + dy * i;
+            if (tx < 0 || tx >= 10 || ty < 0 || ty >= 10) break;
+            const hit = gameState.units.find(u => u.x === tx && u.y === ty && !u.dead && u.player !== attacker.player);
+            if (hit) {
+                const r = this.damage(attacker, hit, damage);
+                total += r.damage;
+                details.push({ name: hit.name, ...r });
+            }
+        }
+        return { damage: total, type: 'pierce', targets: details };
+    },
+    // 中毒：每回合造成伤害
+    poison(attacker, target, damage, turns = 3) {
+        if (!target.debuffs) target.debuffs = [];
+        target.debuffs.push({ type: 'poison', damage, turns });
+        return { type: 'poison', damage, turns };
+    },
+    // 眩晕：跳过回合
+    stun(attacker, target, turns = 1) {
+        if (!target.debuffs) target.debuffs = [];
+        target.debuffs.push({ type: 'stun', turns });
+        target.stunned = turns;
+        return { type: 'stun', turns };
+    },
+    // 减速：降低移动力
+    slow(attacker, target, amount, turns = 2) {
+        if (!target.debuffs) target.debuffs = [];
+        target.debuffs.push({ type: 'slow', amount, turns, originalMov: target.mov });
+        target.mov = Math.max(1, target.mov - amount);
+        return { type: 'slow', amount, turns };
+    },
+    // 设置反击率
+    setCounterRate(target, rate) {
+        target.counterRate = rate;
+        return { type: 'counterRate', rate };
+    },
+    // 设置闪避率
+    setDodgeRate(target, rate) {
+        target.dodgeRate = rate;
+        return { type: 'dodgeRate', rate };
     }
 };
 
@@ -145,36 +218,45 @@ const GENERALS = [
         moveRange: '+3', attackRange: '+1',
         skills: [
             { id: 'dragon', name: '青龙偃月', type: 'active', category: 'normal', range: '+2', spCost: 30, content(a,t) { return Effect.damage(a,t,35); }, desc: '十字2格，造成35伤害' },
-            { id: 'warrior', name: '武圣', type: 'passive', category: 'special', content(a) { a.atk = Math.floor(a.atk * 1.1); }, desc: '攻击力+10%' }
+            { id: 'warrior', name: '武圣', type: 'passive', category: 'special', content(a) { Effect.setCounterRate(a, 0.3); }, desc: '30%概率反击' }
         ]
     },
     {
         id: 'zhugeliang', name: '诸葛亮', hp: 70, atk: 20, def: 10, mov: 2,
         moveRange: '+2', attackRange: '+2',
         skills: [
-            { id: 'fire', name: '火烧赤壁', type: 'active', category: 'normal', range: 'r2', spCost: 35, content(a,t) { return Effect.damage(a,t,28); }, desc: '圆形2格，造成28伤害' },
+            { id: 'fire', name: '火烧赤壁', type: 'active', category: 'normal', range: 'r2', spCost: 40, content(a,t,gs) { return Effect.aoeDamage(a,t,22,1,gs); }, desc: '圆形2格，目标及周围1格造成22伤害' },
             { id: 'summonArcher', name: '借东风', type: 'active', category: 'summon', range: '+1', spCost: 40, summon: 'archer', content(a,pos,gs) { return Effect.summon(a,SUMMONS.archer,pos.x,pos.y,gs); }, desc: '召唤弓手' }
         ]
     },
     {
         id: 'zhaoyun', name: '赵云', hp: 85, atk: 22, def: 12, mov: 4,
         moveRange: '+4', attackRange: ['+1','x1'],
-        skills: [{ id: 'spear', name: '龙胆枪', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a,t) { return Effect.damage(a,t,30); }, desc: '十字3格，30伤害' }]
+        skills: [
+            { id: 'spear', name: '龙胆枪', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a,t) { return Effect.damage(a,t,30); }, desc: '十字3格，30伤害' },
+            { id: 'dodge', name: '七进七出', type: 'passive', category: 'special', content(a) { Effect.setDodgeRate(a, 0.25); }, desc: '25%概率闪避攻击' }
+        ]
     },
     {
         id: 'zhangfei', name: '张飞', hp: 110, atk: 28, def: 18, mov: 2,
         moveRange: '+2', attackRange: '+1',
-        skills: [{ id: 'roar', name: '狮吼功', type: 'active', category: 'normal', range: 'r1', spCost: 35, content(a,t) { return Effect.damage(a,t,40); }, desc: '周围1格，40伤害' }]
+        skills: [
+            { id: 'roar', name: '狮吼功', type: 'active', category: 'normal', range: 'r1', spCost: 35, content(a,t) { return Effect.damage(a,t,40); }, desc: '周围1格，40伤害' },
+            { id: 'stun', name: '震天怒吼', type: 'active', category: 'special', range: '+1', spCost: 30, content(a,t) { Effect.stun(a,t,1); return Effect.damage(a,t,15); }, desc: '眩晕1回合并造成15伤害' }
+        ]
     },
     {
         id: 'huangzhong', name: '黄忠', hp: 75, atk: 26, def: 8, mov: 2,
         moveRange: '+2', attackRange: '+3',
-        skills: [{ id: 'arrow', name: '百步穿杨', type: 'active', category: 'normal', range: '+4', spCost: 30, content(a,t) { return Effect.damage(a,t,32); }, desc: '十字4格，32伤害' }]
+        skills: [{ id: 'pierce', name: '百步穿杨', type: 'active', category: 'normal', range: '+4', spCost: 35, content(a,t,gs) { return Effect.pierceDamage(a,t,28,gs); }, desc: '直线贯穿，路径上所有敌人造成28伤害' }]
     },
     {
         id: 'machao', name: '马超', hp: 90, atk: 24, def: 10, mov: 4,
         moveRange: '+4', attackRange: '+1',
-        skills: [{ id: 'charge', name: '铁骑冲锋', type: 'active', category: 'normal', range: '+3', spCost: 28, content(a,t) { return Effect.damage(a,t,33); }, desc: '十字3格，33伤害' }]
+        skills: [
+            { id: 'charge', name: '铁骑冲锋', type: 'active', category: 'normal', range: '+3', spCost: 28, content(a,t) { return Effect.damage(a,t,33); }, desc: '十字3格，33伤害' },
+            { id: 'slow', name: '践踏', type: 'active', category: 'special', range: 'r1', spCost: 25, content(a,t) { Effect.slow(a,t,1,2); return Effect.damage(a,t,15); }, desc: '减速1移动力2回合并造成15伤害' }
+        ]
     },
     {
         id: 'caocao', name: '曹操', hp: 95, atk: 22, def: 14, mov: 3,
@@ -195,7 +277,10 @@ const GENERALS = [
     {
         id: 'sunce', name: '孙策', hp: 88, atk: 25, def: 11, mov: 3,
         moveRange: '+3', attackRange: '+1',
-        skills: [{ id: 'assault', name: '霸王突袭', type: 'active', category: 'normal', range: '+2', spCost: 30, content(a,t) { return Effect.damage(a,t,35); }, desc: '十字2格，35伤害' }]
+        skills: [
+            { id: 'assault', name: '霸王突袭', type: 'active', category: 'normal', range: '+2', spCost: 30, content(a,t) { return Effect.damage(a,t,35); }, desc: '十字2格，35伤害' },
+            { id: 'poison', name: '淬毒刃', type: 'active', category: 'special', range: '+1', spCost: 25, content(a,t) { Effect.poison(a,t,8,3); return Effect.damage(a,t,15); }, desc: '中毒每回合8伤害3回合并造成15伤害' }
+        ]
     },
     {
         id: 'sunshangxiang', name: '孙尚香', hp: 72, atk: 23, def: 9, mov: 3,
@@ -656,11 +741,25 @@ const Game = {
         const moveRangeStr = Array.isArray(unit.moveRange) ? unit.moveRange.join(', ') : unit.moveRange;
         const attackRangeStr = Array.isArray(unit.attackRange) ? unit.attackRange.join(', ') : unit.attackRange;
 
+        let debuffHtml = '';
+        if (unit.debuffs && unit.debuffs.length > 0) {
+            debuffHtml = '<br>状态: ' + unit.debuffs.map(d => {
+                if (d.type === 'poison') return `中毒(${d.turns}回合)`;
+                if (d.type === 'stun') return `眩晕(${d.turns}回合)`;
+                if (d.type === 'slow') return `减速(${d.turns}回合)`;
+                return d.type;
+            }).join(', ');
+        }
+        if (unit.stunned) debuffHtml += '<br>眩晕中，无法行动';
+        if (unit.counterRate) debuffHtml += `<br>反击率: ${Math.floor(unit.counterRate * 100)}%`;
+        if (unit.dodgeRate) debuffHtml += `<br>闪避率: ${Math.floor(unit.dodgeRate * 100)}%`;
+
         statsEl.innerHTML = `
             HP: ${unit.hp}/${unit.maxHp} | SP: ${unit.sp}/${unit.maxSp}<br>
             攻击: ${unit.atk} | 防御: ${unit.def} | 移动: ${unit.mov}<br>
             移动范围: ${moveRangeStr}<br>
             攻击范围: ${attackRangeStr}
+            ${debuffHtml}
         `;
 
         const skills = unit.skills || [];
@@ -708,14 +807,16 @@ const Game = {
         }
 
         if (hlAttack && this.state.selectedUnit && unit && unit.player !== this.state.selectedUnit.player) {
-            const damage = Math.max(1, Math.floor(this.state.selectedUnit.atk - unit.def * 0.3));
-            unit.hp -= damage;
-            if (unit.hp <= 0) {
-                unit.dead = true;
-                unit.hp = 0;
+            const result = Effect.damage(this.state.selectedUnit, unit, this.state.selectedUnit.atk);
+            if (result.type === 'dodge') {
+                this.state.logs.push(`${unit.name} 闪避了攻击！`);
+            } else if (unit.dead) {
                 this.state.logs.push(`${this.state.selectedUnit.name} 击杀 ${unit.name}`);
             } else {
-                this.state.logs.push(`${this.state.selectedUnit.name} 攻击 ${unit.name} -${damage}`);
+                this.state.logs.push(`${this.state.selectedUnit.name} 攻击 ${unit.name} -${result.damage}`);
+            }
+            if (result.counter) {
+                this.state.logs.push(`${unit.name} 反击 -${result.counter}`);
             }
             this.state.selectedUnit.attacked = true;
             this.clearHighlights();
@@ -734,9 +835,28 @@ const Game = {
                 }
             } else if (unit && unit.player !== this.state.selectedUnit.player) {
                 const result = skill.content(this.state.selectedUnit, unit, this.state);
-                if (result.type === 'damage') {
-                    if (unit.dead) this.state.logs.push(`${this.state.selectedUnit.name} 击杀 ${unit.name}`);
+                if (result.type === 'aoe') {
+                    this.state.logs.push(`${this.state.selectedUnit.name} ${skill.name} AOE伤害`);
+                    result.targets.forEach(t => {
+                        if (t.type === 'dodge') this.state.logs.push(`  ${t.name} 闪避`);
+                        else this.state.logs.push(`  ${t.name} -${t.damage}`);
+                    });
+                } else if (result.type === 'pierce') {
+                    this.state.logs.push(`${this.state.selectedUnit.name} ${skill.name} 穿透攻击`);
+                    result.targets.forEach(t => {
+                        if (t.type === 'dodge') this.state.logs.push(`  ${t.name} 闪避`);
+                        else this.state.logs.push(`  ${t.name} -${t.damage}`);
+                    });
+                } else if (result.type === 'damage') {
+                    if (result.type === 'dodge') this.state.logs.push(`${unit.name} 闪避了！`);
+                    else if (unit.dead) this.state.logs.push(`${this.state.selectedUnit.name} 击杀 ${unit.name}`);
                     else this.state.logs.push(`${this.state.selectedUnit.name} ${skill.name} ${unit.name} -${result.damage}`);
+                } else if (result.type === 'poison') {
+                    this.state.logs.push(`${this.state.selectedUnit.name} 使 ${unit.name} 中毒`);
+                } else if (result.type === 'stun') {
+                    this.state.logs.push(`${this.state.selectedUnit.name} 眩晕 ${unit.name}`);
+                } else if (result.type === 'slow') {
+                    this.state.logs.push(`${this.state.selectedUnit.name} 减速 ${unit.name}`);
                 } else if (result.heal) {
                     this.state.logs.push(`${this.state.selectedUnit.name} ${skill.name} 治疗${result.heal}`);
                 } else if (result.type === 'summon') {
@@ -752,6 +872,10 @@ const Game = {
         }
 
         if (unit && unit.player === this.state.currentPlayer) {
+            if (unit.stunned) {
+                this.state.logs.push(`${unit.name} 处于眩晕状态，无法行动`);
+                return;
+            }
             this.state.selectedUnit = unit;
             this.state.currentSkill = null;
             this.showMoves(unit);
@@ -817,6 +941,7 @@ const Game = {
         this.state.units.forEach(u => {
             u.moved = false; u.attacked = false; u.usedSkill = false;
             u.sp = Math.min(u.maxSp, u.sp + 20);
+            // Buff 结算
             if (u.buffs) {
                 const newBuffs = [];
                 u.buffs.forEach(b => {
@@ -825,6 +950,31 @@ const Game = {
                     else u[b.stat] -= b.value;
                 });
                 u.buffs = newBuffs;
+            }
+            // Debuff 结算
+            if (u.debuffs) {
+                const newDebuffs = [];
+                u.debuffs.forEach(d => {
+                    d.turns--;
+                    if (d.type === 'poison' && !u.dead) {
+                        u.hp = Math.max(1, u.hp - d.damage);
+                        this.state.logs.push(`${u.name} 中毒 -${d.damage}`);
+                    }
+                    if (d.turns > 0) newDebuffs.push(d);
+                    else {
+                        // 减速恢复
+                        if (d.type === 'slow') u.mov = d.originalMov || u.mov;
+                    }
+                });
+                u.debuffs = newDebuffs;
+            }
+            // 眩晕递减
+            if (u.stunned && u.stunned > 0) {
+                u.stunned--;
+                if (u.stunned <= 0) {
+                    u.stunned = 0;
+                    this.state.logs.push(`${u.name} 眩晕解除`);
+                }
             }
         });
         this.state.selectedUnit = null;
