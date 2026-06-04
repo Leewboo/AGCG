@@ -445,12 +445,16 @@ html, body {
 /* 飘字特效 */
 .float-text {
     position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     font-size: 18px;
     font-weight: bold;
     pointer-events: none;
     animation: float-up 0.8s ease-out forwards;
-    z-index: 20;
-    text-shadow: 1px 1px 0 #fff;
+    z-index: 100;
+    text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;
+    white-space: nowrap;
 }
 
 .float-text.damage { color: #c04040; }
@@ -459,8 +463,8 @@ html, body {
 .float-text.counter { color: #c08040; font-size: 14px; }
 
 @keyframes float-up {
-    0% { transform: translateY(0); opacity: 1; }
-    100% { transform: translateY(-30px); opacity: 0; }
+    0% { transform: translate(-50%, -50%); opacity: 1; }
+    100% { transform: translate(-50%, -80px); opacity: 0; }
 }
 
 /* 受击闪烁 */
