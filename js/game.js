@@ -11,7 +11,7 @@ const Range = {
             result.push({ x, y: y + i });
             result.push({ x, y: y - i });
         }
-        return result.filter(p => p.x >= 0 && p.x < 10 && p.y >= 0 && p.y < 10);
+        return result.filter(p => p.x >= 0 && p.x < BOARD_SIZE && p.y >= 0 && p.y < BOARD_SIZE);
     },
     x(n, x, y) {
         const result = [];
@@ -21,7 +21,7 @@ const Range = {
             result.push({ x: x + i, y: y - i });
             result.push({ x: x - i, y: y - i });
         }
-        return result.filter(p => p.x >= 0 && p.x < 10 && p.y >= 0 && p.y < 10);
+        return result.filter(p => p.x >= 0 && p.x < BOARD_SIZE && p.y >= 0 && p.y < BOARD_SIZE);
     },
     r(n, x, y) {
         const result = [];
@@ -33,7 +33,7 @@ const Range = {
                 }
             }
         }
-        return result.filter(p => p.x >= 0 && p.x < 10 && p.y >= 0 && p.y < 10);
+        return result.filter(p => p.x >= 0 && p.x < BOARD_SIZE && p.y >= 0 && p.y < BOARD_SIZE);
     },
     parse(rangeInput, x, y) {
         const ranges = Array.isArray(rangeInput) ? rangeInput : [rangeInput];
@@ -146,9 +146,9 @@ const Effect = {
         const dy = Math.sign(target.y - attacker.y);
         let total = 0;
         const details = [];
-        for (let i = 1; i <= 10; i++) {
+        for (let i = 1; i <= BOARD_SIZE; i++) {
             const tx = attacker.x + dx * i, ty = attacker.y + dy * i;
-            if (tx < 0 || tx >= 10 || ty < 0 || ty >= 10) break;
+            if (tx < 0 || tx >= BOARD_SIZE || ty < 0 || ty >= BOARD_SIZE) break;
             const hit = gameState.units.find(u => u.x === tx && u.y === ty && !u.dead && u.player !== attacker.player);
             if (hit) {
                 const r = this.damage(attacker, hit, damage);
@@ -193,17 +193,20 @@ const Effect = {
 // ================================
 // 游戏数据
 // ================================
+const BOARD_SIZE = 12;
 const TERRAIN = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 0, 3, 0, 0, 0, 0, 3, 0, 0],
-    [2, 0, 0, 1, 0, 0, 1, 0, 0, 2],
-    [2, 0, 4, 0, 0, 0, 0, 0, 0, 2],
-    [2, 0, 0, 0, 0, 0, 0, 4, 0, 2],
-    [2, 0, 0, 1, 0, 0, 1, 0, 0, 2],
-    [0, 0, 3, 0, 0, 0, 0, 3, 0, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    [0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0],
+    [2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 2],
+    [2, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 2],
+    [0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0],
+    [2, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 2],
+    [2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 2],
+    [0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0],
+    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 ];
 const TERRAIN_NAMES = { 0: 'grass', 1: 'mountain', 2: 'river', 3: 'city', 4: 'swamp' };
 const TERRAIN_LABELS = { 0: '', 1: '山', 2: '～', 3: '城', 4: '沼' };
@@ -428,15 +431,15 @@ const Game = {
         count.textContent = `${deployed.length}/5`;
 
         board.innerHTML = '';
-        for (let y = 0; y < 10; y++) {
-            for (let x = 0; x < 10; x++) {
+        for (let y = 0; y < BOARD_SIZE; y++) {
+            for (let x = 0; x < BOARD_SIZE; x++) {
                 const terrainId = TERRAIN[y][x];
                 const terrain = TERRAIN_NAMES[terrainId];
                 const terrainLabel = TERRAIN_LABELS[terrainId];
                 const unit = this.getUnit(x, y);
 
                 let cellClass = `cell ${terrain}`;
-                if (player === 1 && y >= 7) cellClass += ' deploy-zone-p1';
+                if (player === 1 && y >= BOARD_SIZE - 3) cellClass += ' deploy-zone-p1';
                 if (player === 2 && y <= 2) cellClass += ' deploy-zone-p2';
 
                 const cell = document.createElement('div');
@@ -446,7 +449,7 @@ const Game = {
 
                 let cellHtml = '';
                 if (x === 0) cellHtml += `<span class="cell-label top-left">${y}</span>`;
-                if (y === 9) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
+                if (y === BOARD_SIZE - 1) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
                 if (terrainLabel) cellHtml += `<span class="terrain-label" style="font-size:24px;opacity:0.7">${terrainLabel}</span>`;
                 if (unit) cellHtml += this.renderUnit(unit);
                 cell.innerHTML = cellHtml;
@@ -477,7 +480,7 @@ const Game = {
 
     handleDeployClick(x, y) {
         const player = this.state.currentPlayer;
-        if (player === 1 && y < 7) return;
+        if (player === 1 && y < BOARD_SIZE - 3) return;
         if (player === 2 && y > 2) return;
         if (this.getUnit(x, y)) return;
 
@@ -542,7 +545,7 @@ const Game = {
     deployAI() {
         const available = [];
         for (let y = 0; y <= 2; y++) {
-            for (let x = 0; x < 10; x++) {
+            for (let x = 0; x < BOARD_SIZE; x++) {
                 if (!this.getUnit(x, y)) available.push({ x, y });
             }
         }
@@ -598,8 +601,8 @@ const Game = {
 
         if (board) {
             board.innerHTML = '';
-            for (let y = 0; y < 10; y++) {
-                for (let x = 0; x < 10; x++) {
+            for (let y = 0; y < BOARD_SIZE; y++) {
+                for (let x = 0; x < BOARD_SIZE; x++) {
                     const terrainId = TERRAIN[y][x];
                     const terrain = TERRAIN_NAMES[terrainId];
                     const terrainLabel = TERRAIN_LABELS[terrainId];
@@ -616,7 +619,7 @@ const Game = {
 
                     let cellHtml = '';
                     if (x === 0) cellHtml += `<span class="cell-label top-left">${y}</span>`;
-                    if (y === 9) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
+                    if (y === BOARD_SIZE - 1) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
                     if (terrainLabel) cellHtml += `<span class="terrain-label" style="font-size:24px;opacity:0.7">${terrainLabel}</span>`;
                     if (unit) cellHtml += this.renderUnit(unit);
                     cell.innerHTML = cellHtml;
@@ -1111,7 +1114,7 @@ const Game = {
                 const dy = Math.sign(target.y - unit.y);
                 const nx = unit.x + (dx !== 0 ? dx : 0);
                 const ny = unit.y + (dy !== 0 ? dy : 0);
-                if (nx >= 0 && nx < 10 && ny >= 0 && ny < 10 && !this.getUnit(nx, ny)) {
+                if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && !this.getUnit(nx, ny)) {
                     unit.x = nx; unit.y = ny; unit.moved = true;
                 }
             }
