@@ -374,10 +374,12 @@ const Game = {
         container.innerHTML = `
             <div class="sel-info-skills">
                 ${activeSkills.map(s => {
-                    const canUse = u.energy >= s.energyCost && !u.usedSkill;
+                    const isCharged = s.energyCost !== undefined;
+                    const canUse = (!isCharged || u.energy >= s.energyCost) && !u.usedSkill;
+                    const label = isCharged ? `${s.name}(${s.energyCost}能量)` : s.name;
                     return `
                         <div class="sel-skill-wrap">
-                            <button class="sel-skill-btn ${canUse ? 'available' : 'unavailable'}" data-skill="${s.id}">${s.name}(${s.energyCost}能量)</button>
+                            <button class="sel-skill-btn ${canUse ? 'available' : 'unavailable'}" data-skill="${s.id}">${label}</button>
                             <span class="sel-skill-info" data-skill="${s.id}">i</span>
                         </div>
                     `;
@@ -395,7 +397,8 @@ const Game = {
                 e.stopPropagation();
                 const sid = e.currentTarget.dataset.skill;
                 const skill = u.skills.find(s => s.id === sid);
-                if (skill && u.energy >= skill.energyCost && !u.usedSkill) this.selectSkill(skill);
+                const isCharged = skill.energyCost !== undefined;
+                if (skill && (!isCharged || u.energy >= skill.energyCost) && !u.usedSkill) this.selectSkill(skill);
             };
         });
         container.querySelectorAll('.sel-skill-info').forEach(el => {
@@ -664,7 +667,7 @@ const Game = {
                     this.state.logs.push('无效的落点');
                     return;
                 }
-                attacker.energy -= skill.energyCost;
+                if (skill.energyCost !== undefined) attacker.energy -= skill.energyCost;
                 const result = skill.content(attacker, target, this.state, { x, y });
                 // 处理 dash 结果
                 this.addHitAnimation(target);
@@ -687,7 +690,7 @@ const Game = {
             }
 
             // 普通单步技能
-            attacker.energy -= skill.energyCost;
+            if (skill.energyCost !== undefined) attacker.energy -= skill.energyCost;
             if (skill.category === 'summon') {
                 if (!this.getUnit(x, y)) {
                     skill.content(attacker, { x, y }, this.state);

@@ -63,8 +63,7 @@ export const GENERALS = [
                 type: 'active',
                 category: 'special',
                 range: '+4',
-                energyCost: 3,
-                // 两步选择技能：step1选敌人，step2选落点
+                // 胆勇不是充能技，无 energyCost
                 multiStep: true,
                 step1Range: '+4',
                 step2Range: 'r2',
@@ -72,7 +71,7 @@ export const GENERALS = [
                     // landingPos 是 {x, y} 落点
                     return Effect.dashDamage(a, t, 30, landingPos.x, landingPos.y);
                 },
-                desc: '主动：十字4格选择敌方棋子，然后在其r2范围内选择一个空格作为落点，造成30伤害'
+                desc: '主动：十字4格选择敌方棋子，然后在其r2范围内选择一个空格作为落点，造成30伤害（每回合限用一次）'
             }
         ]
     },
