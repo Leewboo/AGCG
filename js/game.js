@@ -1,448 +1,10 @@
-
-// ================================
-// 范围系统定义
-// ================================
-const Range = {
-    // 带阻断的十字范围：遇到任何单位停止延伸（用于移动）
-    plusBlocked(n, x, y, blockedSet) {
-        const result = [];
-        const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];
-        for (const dir of dirs) {
-            for (let i = 1; i <= n; i++) {
-                const px = x + dir.dx * i;
-                const py = y + dir.dy * i;
-                if (px < 0 || px >= BOARD_SIZE || py < 0 || py >= BOARD_SIZE) break;
-                result.push({ x: px, y: py });
-                if (blockedSet.has(`${px},${py}`)) break; // 被阻断
-            }
-        }
-        return result;
-    },
-    // 带阻断的斜角范围
-    xBlocked(n, x, y, blockedSet) {
-        const result = [];
-        const dirs = [{dx:1,dy:1},{dx:-1,dy:1},{dx:1,dy:-1},{dx:-1,dy:-1}];
-        for (const dir of dirs) {
-            for (let i = 1; i <= n; i++) {
-                const px = x + dir.dx * i;
-                const py = y + dir.dy * i;
-                if (px < 0 || px >= BOARD_SIZE || py < 0 || py >= BOARD_SIZE) break;
-                result.push({ x: px, y: py });
-                if (blockedSet.has(`${px},${py}`)) break;
-            }
-        }
-        return result;
-    },
-    // 带阻断的圆形/菱形范围（逐层BFS，被阻挡的格子不继续延伸）
-    rBlocked(n, x, y, blockedSet) {
-        const result = [];
-        const visited = new Set();
-        visited.add(`${x},${y}`);
-        let frontier = [{x, y, d:0}];
-        while (frontier.length > 0) {
-            const next = [];
-            for (const cur of frontier) {
-                if (cur.d >= n) continue;
-                const neighs = [
-                    {x: cur.x+1, y: cur.y}, {x: cur.x-1, y: cur.y},
-                    {x: cur.x, y: cur.y+1}, {x: cur.x, y: cur.y-1}
-                ];
-                for (const nb of neighs) {
-                    const key = `${nb.x},${nb.y}`;
-                    if (nb.x < 0 || nb.x >= BOARD_SIZE || nb.y < 0 || nb.y >= BOARD_SIZE) continue;
-                    if (visited.has(key)) continue;
-                    visited.add(key);
-                    result.push({ x: nb.x, y: nb.y });
-                    // 只有空格子才能继续延伸；被阻挡的格子算在范围内，但不继续扩散
-                    if (!blockedSet.has(key)) {
-                        next.push({x: nb.x, y: nb.y, d: cur.d + 1});
-                    }
-                }
-            }
-            frontier = next;
-        }
-        // 移除起点
-        return result.filter(p => !(p.x === x && p.y === y));
-    },
-    // 原始无阻断范围（保留给需要全范围的场景，如技能AOE）
-    plus(n, x, y) {
-        const result = [];
-        for (let i = 1; i <= n; i++) {
-            result.push({ x: x + i, y });
-            result.push({ x: x - i, y });
-            result.push({ x, y: y + i });
-            result.push({ x, y: y - i });
-        }
-        return result.filter(p => p.x >= 0 && p.x < BOARD_SIZE && p.y >= 0 && p.y < BOARD_SIZE);
-    },
-    x(n, x, y) {
-        const result = [];
-        for (let i = 1; i <= n; i++) {
-            result.push({ x: x + i, y: y + i });
-            result.push({ x: x - i, y: y + i });
-            result.push({ x: x + i, y: y - i });
-            result.push({ x: x - i, y: y - i });
-        }
-        return result.filter(p => p.x >= 0 && p.x < BOARD_SIZE && p.y >= 0 && p.y < BOARD_SIZE);
-    },
-    r(n, x, y) {
-        const result = [];
-        for (let dy = -n; dy <= n; dy++) {
-            for (let dx = -n; dx <= n; dx++) {
-                if (dx === 0 && dy === 0) continue;
-                if (Math.abs(dx) + Math.abs(dy) <= n) {
-                    result.push({ x: x + dx, y: y + dy });
-                }
-            }
-        }
-        return result.filter(p => p.x >= 0 && p.x < BOARD_SIZE && p.y >= 0 && p.y < BOARD_SIZE);
-    },
-    // 阻断版解析：用于移动和攻击范围
-    parseBlocked(rangeInput, x, y, blockedSet) {
-        const ranges = Array.isArray(rangeInput) ? rangeInput : [rangeInput];
-        const result = [];
-        const seen = new Set();
-        for (const rangeStr of ranges) {
-            const match = String(rangeStr).match(/^([+xr])(\d+)$/);
-            if (!match) continue;
-            const type = match[1];
-            const n = parseInt(match[2]);
-            let pts = [];
-            if (type === '+') pts = this.plusBlocked(n, x, y, blockedSet);
-            else if (type === 'x') pts = this.xBlocked(n, x, y, blockedSet);
-            else if (type === 'r') pts = this.rBlocked(n, x, y, blockedSet);
-            for (const p of pts) {
-                const key = `${p.x},${p.y}`;
-                if (!seen.has(key)) {
-                    seen.add(key);
-                    result.push(p);
-                }
-            }
-        }
-        return result;
-    },
-    // 无阻断版解析：用于技能全范围
-    parse(rangeInput, x, y) {
-        const ranges = Array.isArray(rangeInput) ? rangeInput : [rangeInput];
-        const result = [];
-        const seen = new Set();
-        for (const rangeStr of ranges) {
-            const match = String(rangeStr).match(/^([+xr])(\d+)$/);
-            if (!match) continue;
-            const type = match[1];
-            const n = parseInt(match[2]);
-            let pts = [];
-            if (type === '+') pts = this.plus(n, x, y);
-            else if (type === 'x') pts = this.x(n, x, y);
-            else if (type === 'r') pts = this.r(n, x, y);
-            for (const p of pts) {
-                const key = `${p.x},${p.y}`;
-                if (!seen.has(key)) {
-                    seen.add(key);
-                    result.push(p);
-                }
-            }
-        }
-        return result;
-    }
-};
-
-// ================================
-// 效果系统定义
-// ================================
-const Effect = {
-    damage(attacker, target, damage) {
-        // 闪避判定
-        if (target.dodgeRate && Math.random() < target.dodgeRate) {
-            return { damage: 0, type: 'dodge' };
-        }
-        const realDamage = Math.max(1, Math.floor(damage - target.def * 0.3));
-        target.hp -= realDamage;
-        if (target.hp <= 0) {
-            target.hp = 0;
-            target.dead = true;
-        }
-        // 反击判定
-        let counter = null;
-        if (target.counterRate && !target.dead && Math.random() < target.counterRate) {
-            const counterDmg = Math.max(1, Math.floor(target.atk * 0.5 - attacker.def * 0.3));
-            attacker.hp -= counterDmg;
-            if (attacker.hp <= 0) { attacker.hp = 0; attacker.dead = true; }
-            counter = counterDmg;
-        }
-        return { damage: realDamage, type: 'damage', counter };
-    },
-    heal(healer, target, amount) {
-        const healAmount = Math.min(amount, target.maxHp - target.hp);
-        target.hp += healAmount;
-        return { heal: healAmount, type: 'heal' };
-    },
-    buffAtk(user, target, amount, turns = 3) {
-        if (!target.buffs) target.buffs = [];
-        target.buffs.push({ stat: 'atk', value: amount, turns });
-        target.atk += amount;
-        return { buff: 'atk', value: amount, turns, type: 'buff' };
-    },
-    buffDef(user, target, amount, turns = 3) {
-        if (!target.buffs) target.buffs = [];
-        target.buffs.push({ stat: 'def', value: amount, turns });
-        target.def += amount;
-        return { buff: 'def', value: amount, turns, type: 'buff' };
-    },
-    summon(summoner, summonData, x, y, gameState) {
-        const unit = {
-            id: Date.now() + Math.random(),
-            name: summonData.name,
-            player: summoner.player,
-            x, y,
-            hp: summonData.hp,
-            maxHp: summonData.hp,
-            atk: summonData.atk,
-            def: summonData.def,
-            mov: summonData.mov,
-            moveRange: '+' + summonData.mov,
-            attackRange: '+1',
-            sp: 100,
-            maxSp: 100,
-            skills: [],
-            dead: false,
-            moved: false,
-            attacked: false,
-            usedSkill: false,
-            isSummon: true
-        };
-        gameState.units.push(unit);
-        return { unit, type: 'summon' };
-    },
-    // AOE范围伤害：对目标及周围n格所有敌人造成伤害
-    aoeDamage(attacker, target, damage, range, gameState) {
-        const targets = gameState.units.filter(u => !u.dead && u.player !== attacker.player &&
-            Math.abs(u.x - target.x) + Math.abs(u.y - target.y) <= range);
-        let total = 0;
-        const details = [];
-        targets.forEach(enemy => {
-            const r = this.damage(attacker, enemy, damage);
-            total += r.damage;
-            details.push({ name: enemy.name, ...r });
-        });
-        return { damage: total, type: 'aoe', targets: details };
-    },
-    // 穿透伤害：沿方向对路径上所有敌人造成伤害
-    pierceDamage(attacker, target, damage, gameState) {
-        const dx = Math.sign(target.x - attacker.x);
-        const dy = Math.sign(target.y - attacker.y);
-        let total = 0;
-        const details = [];
-        for (let i = 1; i <= BOARD_SIZE; i++) {
-            const tx = attacker.x + dx * i, ty = attacker.y + dy * i;
-            if (tx < 0 || tx >= BOARD_SIZE || ty < 0 || ty >= BOARD_SIZE) break;
-            const hit = gameState.units.find(u => u.x === tx && u.y === ty && !u.dead && u.player !== attacker.player);
-            if (hit) {
-                const r = this.damage(attacker, hit, damage);
-                total += r.damage;
-                details.push({ name: hit.name, ...r });
-            }
-        }
-        return { damage: total, type: 'pierce', targets: details };
-    },
-    // 中毒：每回合造成伤害
-    poison(attacker, target, damage, turns = 3) {
-        if (!target.debuffs) target.debuffs = [];
-        target.debuffs.push({ type: 'poison', damage, turns });
-        return { type: 'poison', damage, turns };
-    },
-    // 眩晕：跳过回合
-    stun(attacker, target, turns = 1) {
-        if (!target.debuffs) target.debuffs = [];
-        target.debuffs.push({ type: 'stun', turns });
-        target.stunned = turns;
-        return { type: 'stun', turns };
-    },
-    // 减速：降低移动力
-    slow(attacker, target, amount, turns = 2) {
-        if (!target.debuffs) target.debuffs = [];
-        target.debuffs.push({ type: 'slow', amount, turns, originalMov: target.mov });
-        target.mov = Math.max(1, target.mov - amount);
-        return { type: 'slow', amount, turns };
-    },
-    // 设置反击率
-    setCounterRate(target, rate) {
-        target.counterRate = rate;
-        return { type: 'counterRate', rate };
-    },
-    // 设置闪避率
-    setDodgeRate(target, rate) {
-        target.dodgeRate = rate;
-        return { type: 'dodgeRate', rate };
-    },
-    // 破甲：降低目标防御（可叠加，回合结束恢复）
-    shredDef(attacker, target, amount, turns = 1) {
-        if (!target.debuffs) target.debuffs = [];
-        target.debuffs.push({ type: 'shredDef', value: amount, turns, originalDef: target.def });
-        target.def = Math.max(0, target.def - amount);
-        return { type: 'shredDef', value: amount, turns };
-    },
-    // 燃烧：持续伤害Debuff
-    burn(attacker, target, damage, turns = 2) {
-        if (!target.debuffs) target.debuffs = [];
-        target.debuffs.push({ type: 'burn', damage, turns });
-        return { type: 'burn', damage, turns };
-    },
-    // 混乱：下回合强制攻击最近友军
-    confuse(attacker, target, turns = 1) {
-        if (!target.debuffs) target.debuffs = [];
-        target.debuffs.push({ type: 'confuse', turns });
-        target.confused = turns;
-        return { type: 'confuse', turns };
-    },
-    // 突刺：造成伤害后使用者退回原位（content中由调用方处理位移，这里仅返回标记）
-    lungeDamage(attacker, target, damage, fromX, fromY) {
-        const r = this.damage(attacker, target, damage);
-        return { ...r, type: 'lunge', fromX, fromY };
-    },
-    // 斩杀再动：若击杀目标则标记再动
-    executeDamage(attacker, target, damage) {
-        const r = this.damage(attacker, target, damage);
-        return { ...r, type: 'execute', extraTurn: target.dead };
-    },
-    // 狙击：目标血量越低伤害越高
-    snipeDamage(attacker, target, baseDamage) {
-        const missingHpRate = 1 - (target.hp / target.maxHp);
-        const bonus = Math.floor(missingHpRate * 5) * 5; // 每缺20%血+5伤害
-        const total = baseDamage + bonus;
-        return this.damage(attacker, target, total);
-    },
-    // 背水：自身血量越低伤害越高
-    desperateDamage(attacker, target, baseDamage) {
-        const missingHpRate = 1 - (attacker.hp / attacker.maxHp);
-        const bonus = Math.floor(missingHpRate * 4) * 5; // 每缺25%血+5伤害
-        const total = baseDamage + bonus;
-        return this.damage(attacker, target, total);
-    },
-    // 连射：连续射击多次
-    multiShot(attacker, target, times, damagePerShot) {
-        const details = [];
-        let total = 0;
-        for (let i = 0; i < times; i++) {
-            const r = this.damage(attacker, target, damagePerShot);
-            total += r.damage;
-            details.push(r);
-            if (target.dead) break;
-        }
-        return { damage: total, type: 'multishot', hits: details.length, details };
-    }
-};
-
-// ================================
-// 游戏数据
-// ================================
-const BOARD_SIZE = 12;
-const TERRAIN = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0],
-    [2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 2],
-    [2, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 2],
-    [0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0],
-    [2, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 2],
-    [2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 2],
-    [0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-];
-const TERRAIN_NAMES = { 0: 'grass', 1: 'mountain', 2: 'river', 3: 'city', 4: 'swamp' };
-const TERRAIN_LABELS = { 0: '', 1: '山', 2: '～', 3: '城', 4: '沼' };
-const SUMMONS = {
-    soldier: { name: '士兵', hp: 40, atk: 8, def: 5, mov: 2 },
-    archer: { name: '弓手', hp: 30, atk: 12, def: 3, mov: 2 },
-    wall: { name: '盾墙', hp: 80, atk: 0, def: 20, mov: 0 }
-};
-// 能量获取条件常量
-const ENERGY_ON_KILL = 1;      // 击杀敌人+1能量
-const ENERGY_ON_HURT = 1;      // 受到伤害+1能量
-const ENERGY_ON_TURN = 1;      // 回合开始+1能量
-const ENERGY_ON_ATTACK = 0;    // 普通攻击命中+0（可调整）
-
-const GENERALS = [
-    {
-        id: 'guanyu', name: '关羽', hp: 100, atk: 25, def: 15, mov: 3,
-        moveRange: '+3', attackRange: '+1',
-        skills: [
-            { id: 'shred', name: '破甲斩', type: 'active', category: 'normal', range: '+2', energyCost: 2, content(a,t) { const d = Effect.damage(a,t,25); Effect.shredDef(a,t,Math.floor(t.def*0.5),1); return {...d, msg:'破甲'}; }, desc: '十字2格，造成25伤害并降低目标50%防御1回合' },
-            { id: 'warrior', name: '武圣', type: 'passive', category: 'special', content(a) { Effect.setCounterRate(a, 0.3); }, desc: '30%概率反击' }
-        ]
-    },
-    {
-        id: 'zhugeliang', name: '诸葛亮', hp: 70, atk: 20, def: 10, mov: 2,
-        moveRange: '+2', attackRange: '+2',
-        skills: [
-            { id: 'fire', name: '火攻', type: 'active', category: 'normal', range: 'r2', energyCost: 3, content(a,t) { const d = Effect.damage(a,t,18); Effect.burn(a,t,15,2); return {...d, msg:'燃烧'}; }, desc: '圆形2格，造成18伤害并附加燃烧（每回合15伤害，2回合）' },
-            { id: 'summonArcher', name: '借东风', type: 'active', category: 'summon', range: '+1', energyCost: 3, summon: 'archer', content(a,pos,gs) { return Effect.summon(a,SUMMONS.archer,pos.x,pos.y,gs); }, desc: '召唤弓手' }
-        ]
-    },
-    {
-        id: 'zhaoyun', name: '赵云', hp: 85, atk: 22, def: 12, mov: 4,
-        moveRange: '+4', attackRange: ['+1','x1'],
-        skills: [
-            { id: 'lunge', name: '龙胆突刺', type: 'active', category: 'normal', range: '+3', energyCost: 2, content(a,t,gs) { const ox=a.x, oy=a.y; const d=Effect.damage(a,t,28); a.x=t.x; a.y=t.y; gs.logs.push(`${a.name} 突进`); return {...d, type:'lunge', fromX:ox, fromY:oy}; }, desc: '十字3格，突进到目标位置造成28伤害（可穿越敌人）' },
-            { id: 'dodge', name: '七进七出', type: 'passive', category: 'special', content(a) { Effect.setDodgeRate(a, 0.25); }, desc: '25%概率闪避攻击' }
-        ]
-    },
-    {
-        id: 'zhangfei', name: '张飞', hp: 110, atk: 28, def: 18, mov: 2,
-        moveRange: '+2', attackRange: '+1',
-        skills: [
-            { id: 'roar', name: '震慑', type: 'active', category: 'normal', range: 'r1', energyCost: 3, content(a,t) { const d=Effect.damage(a,t,30); Effect.stun(a,t,1); return {...d, msg:'眩晕'}; }, desc: '周围1格，造成30伤害并眩晕1回合' },
-            { id: 'stun', name: '震天怒吼', type: 'active', category: 'special', range: '+1', energyCost: 2, content(a,t) { Effect.stun(a,t,1); return Effect.damage(a,t,15); }, desc: '眩晕1回合并造成15伤害' }
-        ]
-    },
-    {
-        id: 'huangzhong', name: '黄忠', hp: 75, atk: 26, def: 8, mov: 2,
-        moveRange: '+2', attackRange: '+3',
-        skills: [{ id: 'snipe', name: '狙击', type: 'active', category: 'normal', range: '+4', energyCost: 2, content(a,t) { return Effect.snipeDamage(a,t,22); }, desc: '十字4格，目标血量越低伤害越高（每缺20%血+5伤害）' }]
-    },
-    {
-        id: 'machao', name: '马超', hp: 90, atk: 24, def: 10, mov: 4,
-        moveRange: '+4', attackRange: '+1',
-        skills: [
-            { id: 'charge', name: '冲锋', type: 'active', category: 'normal', range: '+3', energyCost: 2, content(a,t,gs) { const d=Effect.executeDamage(a,t,28); if(d.extraTurn){ a.moved=false; a.attacked=false; gs.logs.push(`${a.name} 斩杀再动`); } return d; }, desc: '十字3格，造成28伤害，若击杀目标则再次行动' },
-            { id: 'slow', name: '践踏', type: 'active', category: 'special', range: 'r1', energyCost: 1, content(a,t) { Effect.slow(a,t,1,2); return Effect.damage(a,t,15); }, desc: '减速1移动力2回合并造成15伤害' }
-        ]
-    },
-    {
-        id: 'caocao', name: '曹操', hp: 95, atk: 22, def: 14, mov: 3,
-        moveRange: '+3', attackRange: '+1',
-        skills: [
-            { id: 'confuse', name: '离间', type: 'active', category: 'normal', range: 'r2', energyCost: 2, content(a,t) { const d=Effect.damage(a,t,18); Effect.confuse(a,t,1); return {...d, msg:'混乱'}; }, desc: '圆形2格，造成18伤害并混乱1回合（攻击最近友军）' },
-            { id: 'ambition', name: '挟天子', type: 'active', category: 'special', range: 'r1', energyCost: 2, content(a,t) { const d = Effect.damage(a,t,20); Effect.heal(a,a,15); return { ...d, heal: 15 }; }, desc: '吸血：20伤害 +15治疗' }
-        ]
-    },
-    {
-        id: 'caoren', name: '曹仁', hp: 105, atk: 18, def: 22, mov: 2,
-        moveRange: '+2', attackRange: '+1',
-        skills: [
-            { id: 'defend', name: '铜墙铁壁', type: 'active', category: 'normal', range: '+1', energyCost: 1, content(a,t) { Effect.buffDef(a,a,10,2); return Effect.damage(a,t,20); }, desc: '自身防御+10，攻击' },
-            { id: 'summonWall', name: '筑城', type: 'active', category: 'summon', range: '+1', energyCost: 3, summon: 'wall', content(a,pos,gs) { return Effect.summon(a,SUMMONS.wall,pos.x,pos.y,gs); }, desc: '召唤盾墙' }
-        ]
-    },
-    {
-        id: 'sunce', name: '孙策', hp: 88, atk: 25, def: 11, mov: 3,
-        moveRange: '+3', attackRange: '+1',
-        skills: [
-            { id: 'desperate', name: '背水', type: 'active', category: 'normal', range: '+2', energyCost: 2, content(a,t) { return Effect.desperateDamage(a,t,25); }, desc: '十字2格，自身血量越低伤害越高（每缺25%血+5伤害）' },
-            { id: 'poison', name: '淬毒刃', type: 'active', category: 'special', range: '+1', energyCost: 1, content(a,t) { Effect.poison(a,t,8,3); return Effect.damage(a,t,15); }, desc: '中毒每回合8伤害3回合并造成15伤害' }
-        ]
-    },
-    {
-        id: 'sunshangxiang', name: '孙尚香', hp: 72, atk: 23, def: 9, mov: 3,
-        moveRange: '+3', attackRange: ['+2','x2'],
-        skills: [
-            { id: 'multishot', name: '连珠', type: 'active', category: 'normal', range: '+3', energyCost: 2, content(a,t) { return Effect.multiShot(a,t,2,Math.floor(a.atk*0.6)); }, desc: '十字3格，连续射击2次（每次60%攻击）' },
-            { id: 'summonSoldier', name: '练兵', type: 'active', category: 'summon', range: '+1', energyCost: 1, summon: 'soldier', content(a,pos,gs) { return Effect.summon(a,SUMMONS.soldier,pos.x,pos.y,gs); }, desc: '召唤士兵' }
-        ]
-    }
-];
+import { Range } from './range.js';
+import { Effect } from './effect.js';
+import {
+    BOARD_SIZE, TERRAIN, TERRAIN_NAMES, TERRAIN_LABELS,
+    SUMMONS, GENERALS,
+    ENERGY_ON_KILL, ENERGY_ON_HURT, ENERGY_ON_TURN
+} from './data.js';
 
 // ================================
 // 游戏逻辑
@@ -651,8 +213,7 @@ const Game = {
 
         const generals = this.state.players[player].generals;
         const deployed = this.state.players[player].deployed;
-        
-        // 首先使用用户选中的，如果没有选中就自动找第一个未部署的
+
         let generalIdx = this.state.players[player].toDeploy;
         if (generalIdx === null) {
             for (let i = 0; i < 5; i++) {
@@ -662,14 +223,9 @@ const Game = {
                 }
             }
         }
-        // 如果没有可部署的武将，直接返回
         if (generalIdx === null || generalIdx === -1) return;
-        
-        // 确保选中的武将还没有被部署
-        if (deployed.find(d => d.generalId === generals[generalIdx].id)) {
-            return;
-        }
-        
+        if (deployed.find(d => d.generalId === generals[generalIdx].id)) return;
+
         const general = generals[generalIdx];
 
         const unit = {
@@ -916,6 +472,9 @@ const Game = {
                 if (d.type === 'poison') return `中毒(${d.turns}回合)`;
                 if (d.type === 'stun') return `眩晕(${d.turns}回合)`;
                 if (d.type === 'slow') return `减速(${d.turns}回合)`;
+                if (d.type === 'burn') return `燃烧(${d.turns}回合)`;
+                if (d.type === 'confuse') return `混乱(${d.turns}回合)`;
+                if (d.type === 'shredDef') return `破甲(${d.turns}回合)`;
                 return d.type;
             }).join(', ');
         }
@@ -957,17 +516,6 @@ const Game = {
         el.textContent = text;
         cell.appendChild(el);
         setTimeout(() => el.remove(), 800);
-    },
-
-    showTurnBanner(text) {
-        const banner = document.createElement('div');
-        banner.className = 'turn-banner';
-        banner.textContent = text;
-        document.body.appendChild(banner);
-        setTimeout(() => {
-            banner.classList.add('fade-out');
-            setTimeout(() => banner.remove(), 500);
-        }, 800);
     },
 
     addLungeAnimation(attacker, target) {
@@ -1041,14 +589,12 @@ const Game = {
                 if (unit.dead) {
                     this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
                     this.addDeathAnimation(unit);
-                    // 击杀获得能量
                     attacker.energy += ENERGY_ON_KILL;
                     this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_KILL}能量`, 'heal');
                 } else {
                     this.state.logs.push(`${attacker.name} 攻击 ${unit.name} -${result.damage}`);
                 }
             }
-            // 受击方获得能量
             if (!unit.dead && ENERGY_ON_HURT > 0) {
                 unit.energy += ENERGY_ON_HURT;
                 this.showFloatingText(unit.x, unit.y, `+${ENERGY_ON_HURT}能量`, 'heal');
@@ -1057,7 +603,6 @@ const Game = {
                 this.state.logs.push(`${unit.name} 反击 -${result.counter}`);
                 this.showFloatingText(attacker.x, attacker.y, `反击-${result.counter}`, 'counter');
                 this.addHitAnimation(attacker);
-                // 反击受击也获得能量
                 if (!attacker.dead && ENERGY_ON_HURT > 0) {
                     attacker.energy += ENERGY_ON_HURT;
                     this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_HURT}能量`, 'heal');
@@ -1113,10 +658,7 @@ const Game = {
                     });
                 } else if (result.type === 'damage') {
                     this.addHitAnimation(unit);
-                    if (result.type === 'dodge') {
-                        this.state.logs.push(`${unit.name} 闪避了！`);
-                        this.showFloatingText(unit.x, unit.y, '闪避', 'dodge');
-                    } else if (unit.dead) {
+                    if (unit.dead) {
                         this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
                         this.addDeathAnimation(unit);
@@ -1133,6 +675,15 @@ const Game = {
                 } else if (result.type === 'slow') {
                     this.state.logs.push(`${attacker.name} 减速 ${unit.name}`);
                     this.showFloatingText(unit.x, unit.y, '减速', 'damage');
+                } else if (result.type === 'burn') {
+                    this.state.logs.push(`${attacker.name} 使 ${unit.name} 燃烧`);
+                    this.showFloatingText(unit.x, unit.y, '燃烧', 'damage');
+                } else if (result.type === 'confuse') {
+                    this.state.logs.push(`${attacker.name} 使 ${unit.name} 混乱`);
+                    this.showFloatingText(unit.x, unit.y, '混乱', 'damage');
+                } else if (result.type === 'shredDef') {
+                    this.state.logs.push(`${attacker.name} 破甲 ${unit.name}`);
+                    this.showFloatingText(unit.x, unit.y, '破甲', 'damage');
                 } else if (result.heal) {
                     this.state.logs.push(`${attacker.name} ${skill.name} 治疗${result.heal}`);
                     this.showFloatingText(attacker.x, attacker.y, `+${result.heal}`, 'heal');
@@ -1189,13 +740,11 @@ const Game = {
 
     showMoves(unit) {
         this.state.highlights = [];
-        // 构建所有存活单位的位置集合（用于范围阻断）
         const blockedSet = new Set();
         this.state.units.forEach(u => {
             if (!u.dead) blockedSet.add(`${u.x},${u.y}`);
         });
         if (!unit.moved) {
-            // 移动范围：被任何单位阻断，且目标格必须为空
             const moveRange = Range.parseBlocked(unit.moveRange || '+' + unit.mov, unit.x, unit.y, blockedSet);
             moveRange.forEach(p => {
                 if (!this.getUnit(p.x, p.y)) {
@@ -1204,7 +753,6 @@ const Game = {
             });
         }
         if (!unit.attacked) {
-            // 攻击范围：被任何单位阻断（视线阻断），但阻挡格本身如果是敌人仍可攻击
             const attackRange = Range.parseBlocked(unit.attackRange || '+1', unit.x, unit.y, blockedSet);
             attackRange.forEach(p => {
                 const target = this.getUnit(p.x, p.y);
@@ -1224,11 +772,9 @@ const Game = {
     endTurn() {
         this.state.units.forEach(u => {
             u.moved = false; u.attacked = false; u.usedSkill = false;
-            // 回合开始获得能量
             if (!u.dead && ENERGY_ON_TURN > 0) {
                 u.energy += ENERGY_ON_TURN;
             }
-            // Buff 结算
             if (u.buffs) {
                 const newBuffs = [];
                 u.buffs.forEach(b => {
@@ -1238,7 +784,6 @@ const Game = {
                 });
                 u.buffs = newBuffs;
             }
-            // Debuff 结算
             if (u.debuffs) {
                 const newDebuffs = [];
                 u.debuffs.forEach(d => {
@@ -1255,11 +800,8 @@ const Game = {
                     }
                     if (d.turns > 0) newDebuffs.push(d);
                     else {
-                        // 减速恢复
                         if (d.type === 'slow') u.mov = d.originalMov || u.mov;
-                        // 破甲恢复
                         if (d.type === 'shredDef') u.def = d.originalDef || u.def;
-                        // 混乱解除
                         if (d.type === 'confuse') {
                             u.confused = 0;
                             this.state.logs.push(`${u.name} 混乱解除`);
@@ -1268,7 +810,6 @@ const Game = {
                 });
                 u.debuffs = newDebuffs;
             }
-            // 眩晕递减
             if (u.stunned && u.stunned > 0) {
                 u.stunned--;
                 if (u.stunned <= 0) {
@@ -1276,7 +817,6 @@ const Game = {
                     this.state.logs.push(`${u.name} 眩晕解除`);
                 }
             }
-            // 混乱递减
             if (u.confused && u.confused > 0) {
                 u.confused--;
                 if (u.confused <= 0) u.confused = 0;
