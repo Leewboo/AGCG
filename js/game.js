@@ -630,26 +630,7 @@ const Game = {
             const skill = this.state.currentSkill;
             const attacker = this.state.selectedUnit;
 
-            // 多步技能：第一步选目标
-            if (skill.multiStep && this.state.skillStep === 0) {
-                if (unit && unit.player !== attacker.player) {
-                    this.state.skillTarget = unit;
-                    this.state.skillStep = 1;
-                    this.state.highlights = [];
-                    // 第二步：显示目标周围r2范围内的空格
-                    const landingRange = Range.parse(skill.step2Range || 'r2', unit.x, unit.y);
-                    landingRange.forEach(p => {
-                        if (!this.getUnit(p.x, p.y)) {
-                            this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
-                        }
-                    });
-                    this.state.logs.push(`${attacker.name} 选择落点...`);
-                    this.renderBattle();
-                }
-                return;
-            }
-
-            // 多步技能：第二步选落点
+            // 优先处理第二步选落点（落点是空格，没有unit）
             if (skill.multiStep && this.state.skillStep === 1) {
                 const target = this.state.skillTarget;
                 if (!target || target.dead) {
@@ -662,6 +643,7 @@ const Game = {
                 }
                 // 检查落点是否在目标r2范围内且为空
                 const landingRange = Range.parse(skill.step2Range || 'r2', target.x, target.y);
+                this.state.logs.push(`点击位置: (${x},${y}), 可用落点: ${landingRange.map(p => `(${p.x},${p.y})`).join(' ')}`);
                 const valid = landingRange.find(p => p.x === x && p.y === y);
                 if (!valid || this.getUnit(x, y)) {
                     this.state.logs.push('无效的落点');
@@ -686,6 +668,26 @@ const Game = {
                 this.clearHighlights();
                 this.checkWin();
                 this.renderBattle();
+                return;
+            }
+
+            // 多步技能：第一步选目标
+            if (skill.multiStep && this.state.skillStep === 0) {
+                if (unit && unit.player !== attacker.player) {
+                    this.state.skillTarget = unit;
+                    this.state.skillStep = 1;
+                    this.state.highlights = [];
+                    // 第二步：显示目标周围r2范围内的空格
+                    const landingRange = Range.parse(skill.step2Range || 'r2', unit.x, unit.y);
+                    this.state.logs.push(`可用落点: ${landingRange.map(p => `(${p.x},${p.y})`).join(' ')}`);
+                    landingRange.forEach(p => {
+                        if (!this.getUnit(p.x, p.y)) {
+                            this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
+                        }
+                    });
+                    this.state.logs.push(`${attacker.name} 选择落点...`);
+                    this.renderBattle();
+                }
                 return;
             }
 
