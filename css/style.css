@@ -112,6 +112,7 @@ html, body {
     grid-template-columns: repeat(5, 1fr);
     gap: 12px;
     width: 100%;
+    overflow-y: auto;
 }
 
 .general-card {
@@ -123,11 +124,34 @@ html, body {
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    position: relative;
 }
 
 .general-card.selected {
     border-color: #000;
     background: #f0f0f0;
+}
+
+.general-card .info-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    background: #666;
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.general-card .info-btn:hover {
+    background: #000;
 }
 
 .general-icon {
@@ -787,7 +811,20 @@ html, body {
 /* 响应式 */
 @media (max-width: 768px) {
     .title { font-size: 36px; }
-    .generals-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .generals-grid {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 8px;
+    }
+    .general-card {
+        flex: 0 0 100px;
+        aspect-ratio: 3/4;
+        height: 140px;
+    }
     #select-title { font-size: 20px; }
     .board { grid-template-columns: repeat(12, 40px); grid-template-rows: repeat(12, 40px); }
     .cell { width: 40px; height: 40px; font-size: 20px; }

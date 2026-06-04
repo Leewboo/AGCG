@@ -367,6 +367,7 @@ const Game = {
             const isOpponentSelected = this.state.players[this.state.currentPlayer === 1 ? 2 : 1].generals.find(s => s.id === g.id);
             return `
                 <div class="general-card ${isSelected ? 'selected' : ''}" data-id="${g.id}" style="opacity: ${isOpponentSelected ? '0.2' : '1'}">
+                    <span class="info-btn" data-id="${g.id}">i</span>
                     <div class="general-icon">${g.name[0]}</div>
                     <div class="general-name">${g.name}</div>
                 </div>
@@ -375,6 +376,7 @@ const Game = {
 
         list.querySelectorAll('.general-card').forEach(card => {
             card.onclick = (e) => {
+                if (e.target.classList.contains('info-btn')) return;
                 const id = e.currentTarget.dataset.id;
                 const opponentSelected = this.state.players[this.state.currentPlayer === 1 ? 2 : 1].generals.find(s => s.id === id);
                 if (opponentSelected) return;
@@ -383,6 +385,20 @@ const Game = {
                 if (idx >= 0) generals.splice(idx, 1);
                 else if (generals.length < 5) generals.push({ ...GENERALS.find(gg => gg.id === id) });
                 this.renderSelect();
+            };
+        });
+
+        list.querySelectorAll('.info-btn').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const id = e.currentTarget.dataset.id;
+                const g = GENERALS.find(gg => gg.id === id);
+                if (g) {
+                    const moveRangeStr = Array.isArray(g.moveRange) ? g.moveRange.join(', ') : g.moveRange;
+                    const attackRangeStr = Array.isArray(g.attackRange) ? g.attackRange.join(', ') : g.attackRange;
+                    const skillsDesc = g.skills.map(s => `${s.name}(${s.type === 'passive' ? '被动' : '主动'}${s.spCost ? ` SP:${s.spCost}` : ''}): ${s.desc}`).join('\n');
+                    alert(`${g.name}\nHP: ${g.hp} | 攻: ${g.atk} | 防: ${g.def} | 移: ${g.mov}\n移动范围: ${moveRangeStr}\n攻击范围: ${attackRangeStr}\n\n技能:\n${skillsDesc}`);
+                }
             };
         });
     },
