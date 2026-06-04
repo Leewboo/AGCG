@@ -480,6 +480,17 @@ html, body {
     border-color: #4080c0;
 }
 
+.bar-general.summon {
+    background: #f5f5f5;
+    border-style: dashed;
+    opacity: 0.9;
+}
+
+.bar-general.summon .bar-general-name {
+    font-size: 12px;
+    color: #666;
+}
+
 .bar-general-name {
     font-size: 14px;
     font-weight: bold;

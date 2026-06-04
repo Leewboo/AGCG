@@ -603,11 +603,12 @@ const Game = {
         if (!p1Bar || !p2Bar) return;
 
         const renderBar = (player, container) => {
-            const units = this.state.units.filter(u => u.player === player && u.generalId);
+            const units = this.state.units.filter(u => u.player === player && !u.dead);
             container.innerHTML = units.map(u => {
                 const hpPercent = (u.hp / u.maxHp * 100).toFixed(0);
+                const isSummon = u.isSummon ? ' summon' : '';
                 return `
-                    <div class="bar-general ${u.dead ? 'dead' : ''} p${player}" data-unit-id="${u.id}">
+                    <div class="bar-general ${u.dead ? 'dead' : ''} p${player}${isSummon}" data-unit-id="${u.id}">
                         <span class="bar-general-name">${u.name}</span>
                         <div class="bar-general-hp">
                             <div class="bar-general-hp-fill" style="width: ${hpPercent}%"></div>
