@@ -274,6 +274,62 @@ const Effect = {
     setDodgeRate(target, rate) {
         target.dodgeRate = rate;
         return { type: 'dodgeRate', rate };
+    },
+    // 破甲：降低目标防御（可叠加，回合结束恢复）
+    shredDef(attacker, target, amount, turns = 1) {
+        if (!target.debuffs) target.debuffs = [];
+        target.debuffs.push({ type: 'shredDef', value: amount, turns, originalDef: target.def });
+        target.def = Math.max(0, target.def - amount);
+        return { type: 'shredDef', value: amount, turns };
+    },
+    // 燃烧：持续伤害Debuff
+    burn(attacker, target, damage, turns = 2) {
+        if (!target.debuffs) target.debuffs = [];
+        target.debuffs.push({ type: 'burn', damage, turns });
+        return { type: 'burn', damage, turns };
+    },
+    // 混乱：下回合强制攻击最近友军
+    confuse(attacker, target, turns = 1) {
+        if (!target.debuffs) target.debuffs = [];
+        target.debuffs.push({ type: 'confuse', turns });
+        target.confused = turns;
+        return { type: 'confuse', turns };
+    },
+    // 突刺：造成伤害后使用者退回原位（content中由调用方处理位移，这里仅返回标记）
+    lungeDamage(attacker, target, damage, fromX, fromY) {
+        const r = this.damage(attacker, target, damage);
+        return { ...r, type: 'lunge', fromX, fromY };
+    },
+    // 斩杀再动：若击杀目标则标记再动
+    executeDamage(attacker, target, damage) {
+        const r = this.damage(attacker, target, damage);
+        return { ...r, type: 'execute', extraTurn: target.dead };
+    },
+    // 狙击：目标血量越低伤害越高
+    snipeDamage(attacker, target, baseDamage) {
+        const missingHpRate = 1 - (target.hp / target.maxHp);
+        const bonus = Math.floor(missingHpRate * 5) * 5; // 每缺20%血+5伤害
+        const total = baseDamage + bonus;
+        return this.damage(attacker, target, total);
+    },
+    // 背水：自身血量越低伤害越高
+    desperateDamage(attacker, target, baseDamage) {
+        const missingHpRate = 1 - (attacker.hp / attacker.maxHp);
+        const bonus = Math.floor(missingHpRate * 4) * 5; // 每缺25%血+5伤害
+        const total = baseDamage + bonus;
+        return this.damage(attacker, target, total);
+    },
+    // 连射：连续射击多次
+    multiShot(attacker, target, times, damagePerShot) {
+        const details = [];
+        let total = 0;
+        for (let i = 0; i < times; i++) {
+            const r = this.damage(attacker, target, damagePerShot);
+            total += r.damage;
+            details.push(r);
+            if (target.dead) break;
+        }
+        return { damage: total, type: 'multishot', hits: details.length, details };
     }
 };
 
@@ -307,7 +363,7 @@ const GENERALS = [
         id: 'guanyu', name: '关羽', hp: 100, atk: 25, def: 15, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
-            { id: 'dragon', name: '青龙偃月', type: 'active', category: 'normal', range: '+2', spCost: 30, content(a,t) { return Effect.damage(a,t,35); }, desc: '十字2格，造成35伤害' },
+            { id: 'shred', name: '破甲斩', type: 'active', category: 'normal', range: '+2', spCost: 30, content(a,t) { const d = Effect.damage(a,t,25); Effect.shredDef(a,t,Math.floor(t.def*0.5),1); return {...d, msg:'破甲'}; }, desc: '十字2格，造成25伤害并降低目标50%防御1回合' },
             { id: 'warrior', name: '武圣', type: 'passive', category: 'special', content(a) { Effect.setCounterRate(a, 0.3); }, desc: '30%概率反击' }
         ]
     },
@@ -315,7 +371,7 @@ const GENERALS = [
         id: 'zhugeliang', name: '诸葛亮', hp: 70, atk: 20, def: 10, mov: 2,
         moveRange: '+2', attackRange: '+2',
         skills: [
-            { id: 'fire', name: '火烧赤壁', type: 'active', category: 'normal', range: 'r2', spCost: 40, content(a,t,gs) { return Effect.aoeDamage(a,t,22,1,gs); }, desc: '圆形2格，目标及周围1格造成22伤害' },
+            { id: 'fire', name: '火攻', type: 'active', category: 'normal', range: 'r2', spCost: 40, content(a,t) { const d = Effect.damage(a,t,18); Effect.burn(a,t,15,2); return {...d, msg:'燃烧'}; }, desc: '圆形2格，造成18伤害并附加燃烧（每回合15伤害，2回合）' },
             { id: 'summonArcher', name: '借东风', type: 'active', category: 'summon', range: '+1', spCost: 40, summon: 'archer', content(a,pos,gs) { return Effect.summon(a,SUMMONS.archer,pos.x,pos.y,gs); }, desc: '召唤弓手' }
         ]
     },
@@ -323,7 +379,7 @@ const GENERALS = [
         id: 'zhaoyun', name: '赵云', hp: 85, atk: 22, def: 12, mov: 4,
         moveRange: '+4', attackRange: ['+1','x1'],
         skills: [
-            { id: 'spear', name: '龙胆枪', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a,t) { return Effect.damage(a,t,30); }, desc: '十字3格，30伤害' },
+            { id: 'lunge', name: '龙胆突刺', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a,t,gs) { const ox=a.x, oy=a.y; const d=Effect.damage(a,t,28); a.x=t.x; a.y=t.y; gs.logs.push(`${a.name} 突进`); return {...d, type:'lunge', fromX:ox, fromY:oy}; }, desc: '十字3格，突进到目标位置造成28伤害（可穿越敌人）' },
             { id: 'dodge', name: '七进七出', type: 'passive', category: 'special', content(a) { Effect.setDodgeRate(a, 0.25); }, desc: '25%概率闪避攻击' }
         ]
     },
@@ -331,20 +387,20 @@ const GENERALS = [
         id: 'zhangfei', name: '张飞', hp: 110, atk: 28, def: 18, mov: 2,
         moveRange: '+2', attackRange: '+1',
         skills: [
-            { id: 'roar', name: '狮吼功', type: 'active', category: 'normal', range: 'r1', spCost: 35, content(a,t) { return Effect.damage(a,t,40); }, desc: '周围1格，40伤害' },
+            { id: 'roar', name: '震慑', type: 'active', category: 'normal', range: 'r1', spCost: 35, content(a,t) { const d=Effect.damage(a,t,30); Effect.stun(a,t,1); return {...d, msg:'眩晕'}; }, desc: '周围1格，造成30伤害并眩晕1回合' },
             { id: 'stun', name: '震天怒吼', type: 'active', category: 'special', range: '+1', spCost: 30, content(a,t) { Effect.stun(a,t,1); return Effect.damage(a,t,15); }, desc: '眩晕1回合并造成15伤害' }
         ]
     },
     {
         id: 'huangzhong', name: '黄忠', hp: 75, atk: 26, def: 8, mov: 2,
         moveRange: '+2', attackRange: '+3',
-        skills: [{ id: 'pierce', name: '百步穿杨', type: 'active', category: 'normal', range: '+4', spCost: 35, content(a,t,gs) { return Effect.pierceDamage(a,t,28,gs); }, desc: '直线贯穿，路径上所有敌人造成28伤害' }]
+        skills: [{ id: 'snipe', name: '狙击', type: 'active', category: 'normal', range: '+4', spCost: 35, content(a,t) { return Effect.snipeDamage(a,t,22); }, desc: '十字4格，目标血量越低伤害越高（每缺20%血+5伤害）' }]
     },
     {
         id: 'machao', name: '马超', hp: 90, atk: 24, def: 10, mov: 4,
         moveRange: '+4', attackRange: '+1',
         skills: [
-            { id: 'charge', name: '铁骑冲锋', type: 'active', category: 'normal', range: '+3', spCost: 28, content(a,t) { return Effect.damage(a,t,33); }, desc: '十字3格，33伤害' },
+            { id: 'charge', name: '冲锋', type: 'active', category: 'normal', range: '+3', spCost: 28, content(a,t,gs) { const d=Effect.executeDamage(a,t,28); if(d.extraTurn){ a.moved=false; a.attacked=false; gs.logs.push(`${a.name} 斩杀再动`); } return d; }, desc: '十字3格，造成28伤害，若击杀目标则再次行动' },
             { id: 'slow', name: '践踏', type: 'active', category: 'special', range: 'r1', spCost: 25, content(a,t) { Effect.slow(a,t,1,2); return Effect.damage(a,t,15); }, desc: '减速1移动力2回合并造成15伤害' }
         ]
     },
@@ -352,7 +408,7 @@ const GENERALS = [
         id: 'caocao', name: '曹操', hp: 95, atk: 22, def: 14, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
-            { id: 'strategy', name: '奸雄之计', type: 'active', category: 'normal', range: 'r2', spCost: 30, content(a,t) { return Effect.damage(a,t,25); }, desc: '圆形2格，25伤害' },
+            { id: 'confuse', name: '离间', type: 'active', category: 'normal', range: 'r2', spCost: 30, content(a,t) { const d=Effect.damage(a,t,18); Effect.confuse(a,t,1); return {...d, msg:'混乱'}; }, desc: '圆形2格，造成18伤害并混乱1回合（攻击最近友军）' },
             { id: 'ambition', name: '挟天子', type: 'active', category: 'special', range: 'r1', spCost: 35, content(a,t) { const d = Effect.damage(a,t,20); Effect.heal(a,a,15); return { ...d, heal: 15 }; }, desc: '吸血：20伤害 +15治疗' }
         ]
     },
@@ -368,7 +424,7 @@ const GENERALS = [
         id: 'sunce', name: '孙策', hp: 88, atk: 25, def: 11, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
-            { id: 'assault', name: '霸王突袭', type: 'active', category: 'normal', range: '+2', spCost: 30, content(a,t) { return Effect.damage(a,t,35); }, desc: '十字2格，35伤害' },
+            { id: 'desperate', name: '背水', type: 'active', category: 'normal', range: '+2', spCost: 30, content(a,t) { return Effect.desperateDamage(a,t,25); }, desc: '十字2格，自身血量越低伤害越高（每缺25%血+5伤害）' },
             { id: 'poison', name: '淬毒刃', type: 'active', category: 'special', range: '+1', spCost: 25, content(a,t) { Effect.poison(a,t,8,3); return Effect.damage(a,t,15); }, desc: '中毒每回合8伤害3回合并造成15伤害' }
         ]
     },
@@ -376,7 +432,7 @@ const GENERALS = [
         id: 'sunshangxiang', name: '孙尚香', hp: 72, atk: 23, def: 9, mov: 3,
         moveRange: '+3', attackRange: ['+2','x2'],
         skills: [
-            { id: 'bow', name: '枭姬弓', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a,t) { return Effect.damage(a,t,28); }, desc: '十字3格，28伤害' },
+            { id: 'multishot', name: '连珠', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a,t) { return Effect.multiShot(a,t,2,Math.floor(a.atk*0.6)); }, desc: '十字3格，连续射击2次（每次60%攻击）' },
             { id: 'summonSoldier', name: '练兵', type: 'active', category: 'summon', range: '+1', spCost: 25, summon: 'soldier', content(a,pos,gs) { return Effect.summon(a,SUMMONS.soldier,pos.x,pos.y,gs); }, desc: '召唤士兵' }
         ]
     }
@@ -1164,14 +1220,27 @@ const Game = {
                 const newDebuffs = [];
                 u.debuffs.forEach(d => {
                     d.turns--;
-                    if (d.type === 'poison' && !u.dead) {
-                        u.hp = Math.max(1, u.hp - d.damage);
-                        this.state.logs.push(`${u.name} 中毒 -${d.damage}`);
+                    if (!u.dead) {
+                        if (d.type === 'poison') {
+                            u.hp = Math.max(1, u.hp - d.damage);
+                            this.state.logs.push(`${u.name} 中毒 -${d.damage}`);
+                        }
+                        if (d.type === 'burn') {
+                            u.hp = Math.max(1, u.hp - d.damage);
+                            this.state.logs.push(`${u.name} 燃烧 -${d.damage}`);
+                        }
                     }
                     if (d.turns > 0) newDebuffs.push(d);
                     else {
                         // 减速恢复
                         if (d.type === 'slow') u.mov = d.originalMov || u.mov;
+                        // 破甲恢复
+                        if (d.type === 'shredDef') u.def = d.originalDef || u.def;
+                        // 混乱解除
+                        if (d.type === 'confuse') {
+                            u.confused = 0;
+                            this.state.logs.push(`${u.name} 混乱解除`);
+                        }
                     }
                 });
                 u.debuffs = newDebuffs;
@@ -1183,6 +1252,11 @@ const Game = {
                     u.stunned = 0;
                     this.state.logs.push(`${u.name} 眩晕解除`);
                 }
+            }
+            // 混乱递减
+            if (u.confused && u.confused > 0) {
+                u.confused--;
+                if (u.confused <= 0) u.confused = 0;
             }
         });
         this.state.selectedUnit = null;
