@@ -570,6 +570,40 @@ const Game = {
         this.state.logs.push(`当前状态: selectedUnit=${!!this.state.selectedUnit}, currentSkill=${!!this.state.currentSkill}, skillStep=${this.state.skillStep}`);
         this.state.logs.push(`当前高亮: ${this.state.highlights.map(h => `(${h.x},${h.y})-${h.type}`).join(' ')}`);
         
+        // 简化处理：如果是第二步直接判断
+        if (this.state.currentSkill && this.state.currentSkill.multiStep && this.state.skillStep === 1) {
+            const target = this.state.skillTarget;
+            if (target && !target.dead) {
+                const landingRange = Range.parse(this.state.currentSkill.step2Range || 'r2', target.x, target.y);
+                const valid = landingRange.find(p => p.x === x && p.y === y);
+                if (valid && !this.getUnit(x, y)) {
+                    // 直接执行
+                    this.state.logs.push('直接执行胆勇！');
+                    const attacker = this.state.selectedUnit;
+                    const skill = this.state.currentSkill;
+                    if (skill.energyCost !== undefined) attacker.energy -= skill.energyCost;
+                    const result = skill.content(attacker, target, this.state, { x, y });
+                    this.addHitAnimation(target);
+                    if (target.dead) {
+                        this.state.logs.push(`${attacker.name} 胆勇击杀 ${target.name}`);
+                        this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
+                        this.addDeathAnimation(target);
+                    } else {
+                        this.state.logs.push(`${attacker.name} 胆勇 ${target.name} -${result.damage}`);
+                        this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
+                    }
+                    attacker.usedSkill = true;
+                    this.state.currentSkill = null;
+                    this.state.skillStep = 0;
+                    this.state.skillTarget = null;
+                    this.clearHighlights();
+                    this.checkWin();
+                    this.renderBattle();
+                    return;
+                }
+            }
+        }
+        
         const unit = this.getUnit(x, y);
         const hlMove = this.state.highlights.find(h => h.x === x && h.y === y && h.type === 'move');
         const hlAttack = this.state.highlights.find(h => h.x === x && h.y === y && h.type === 'attack');
