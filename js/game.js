@@ -777,6 +777,67 @@ const Game = {
         document.getElementById('detail-panel').classList.add('hidden');
     },
 
+    // ================================
+    // 特效系统
+    // ================================
+    showFloatingText(x, y, text, type) {
+        const board = document.getElementById('battle-board');
+        if (!board) return;
+        const cell = board.children[y * 10 + x];
+        if (!cell) return;
+        const el = document.createElement('div');
+        el.className = `float-text ${type}`;
+        el.textContent = text;
+        cell.appendChild(el);
+        setTimeout(() => el.remove(), 800);
+    },
+
+    showTurnBanner(text) {
+        const banner = document.createElement('div');
+        banner.className = 'turn-banner';
+        banner.textContent = text;
+        document.body.appendChild(banner);
+        setTimeout(() => {
+            banner.classList.add('fade-out');
+            setTimeout(() => banner.remove(), 500);
+        }, 800);
+    },
+
+    addLungeAnimation(attacker, target) {
+        const board = document.getElementById('battle-board');
+        if (!board) return;
+        const cell = board.children[attacker.y * 10 + attacker.x];
+        if (!cell) return;
+        const unitEl = cell.querySelector('.unit');
+        if (!unitEl) return;
+        const dx = target.x - attacker.x;
+        const dy = target.y - attacker.y;
+        const dir = dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'down' : 'up';
+        unitEl.classList.add(`lunge-${dir}`);
+        setTimeout(() => unitEl.classList.remove(`lunge-${dir}`), 200);
+    },
+
+    addHitAnimation(target) {
+        const board = document.getElementById('battle-board');
+        if (!board) return;
+        const cell = board.children[target.y * 10 + target.x];
+        if (!cell) return;
+        const unitEl = cell.querySelector('.unit');
+        if (!unitEl) return;
+        unitEl.classList.add('hit');
+        setTimeout(() => unitEl.classList.remove('hit'), 300);
+    },
+
+    addDeathAnimation(unit) {
+        const board = document.getElementById('battle-board');
+        if (!board) return;
+        const cell = board.children[unit.y * 10 + unit.x];
+        if (!cell) return;
+        const unitEl = cell.querySelector('.unit');
+        if (!unitEl) return;
+        unitEl.classList.add('dying');
+    },
+
     renderUnit(unit) {
         const hpPercent = (unit.hp / unit.maxHp * 100).toFixed(0);
         const isSelected = this.state.selectedUnit && this.state.selectedUnit.id === unit.id;
@@ -807,18 +868,28 @@ const Game = {
         }
 
         if (hlAttack && this.state.selectedUnit && unit && unit.player !== this.state.selectedUnit.player) {
-            const result = Effect.damage(this.state.selectedUnit, unit, this.state.selectedUnit.atk);
+            const attacker = this.state.selectedUnit;
+            const result = Effect.damage(attacker, unit, attacker.atk);
+            this.addLungeAnimation(attacker, unit);
             if (result.type === 'dodge') {
                 this.state.logs.push(`${unit.name} 闪避了攻击！`);
-            } else if (unit.dead) {
-                this.state.logs.push(`${this.state.selectedUnit.name} 击杀 ${unit.name}`);
+                this.showFloatingText(unit.x, unit.y, '闪避', 'dodge');
             } else {
-                this.state.logs.push(`${this.state.selectedUnit.name} 攻击 ${unit.name} -${result.damage}`);
+                this.addHitAnimation(unit);
+                this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
+                if (unit.dead) {
+                    this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
+                    this.addDeathAnimation(unit);
+                } else {
+                    this.state.logs.push(`${attacker.name} 攻击 ${unit.name} -${result.damage}`);
+                }
             }
             if (result.counter) {
                 this.state.logs.push(`${unit.name} 反击 -${result.counter}`);
+                this.showFloatingText(attacker.x, attacker.y, `反击-${result.counter}`, 'counter');
+                this.addHitAnimation(attacker);
             }
-            this.state.selectedUnit.attacked = true;
+            attacker.attacked = true;
             this.clearHighlights();
             this.checkWin();
             this.renderBattle();
@@ -827,43 +898,75 @@ const Game = {
 
         if (hlSkill && this.state.selectedUnit && this.state.currentSkill) {
             const skill = this.state.currentSkill;
-            this.state.selectedUnit.sp -= skill.spCost;
+            const attacker = this.state.selectedUnit;
+            attacker.sp -= skill.spCost;
             if (skill.category === 'summon') {
                 if (!this.getUnit(x, y)) {
-                    skill.content(this.state.selectedUnit, { x, y }, this.state);
-                    this.state.logs.push(`${this.state.selectedUnit.name} 召唤 ${SUMMONS[skill.summon].name}`);
+                    skill.content(attacker, { x, y }, this.state);
+                    this.state.logs.push(`${attacker.name} 召唤 ${SUMMONS[skill.summon].name}`);
                 }
-            } else if (unit && unit.player !== this.state.selectedUnit.player) {
-                const result = skill.content(this.state.selectedUnit, unit, this.state);
+            } else if (unit && unit.player !== attacker.player) {
+                const result = skill.content(attacker, unit, this.state);
                 if (result.type === 'aoe') {
-                    this.state.logs.push(`${this.state.selectedUnit.name} ${skill.name} AOE伤害`);
+                    this.state.logs.push(`${attacker.name} ${skill.name} AOE伤害`);
                     result.targets.forEach(t => {
+                        const tUnit = this.state.units.find(u => u.name === t.name && !u.dead);
+                        if (tUnit) {
+                            if (t.type === 'dodge') this.showFloatingText(tUnit.x, tUnit.y, '闪避', 'dodge');
+                            else {
+                                this.showFloatingText(tUnit.x, tUnit.y, `-${t.damage}`, 'damage');
+                                this.addHitAnimation(tUnit);
+                                if (tUnit.dead) this.addDeathAnimation(tUnit);
+                            }
+                        }
                         if (t.type === 'dodge') this.state.logs.push(`  ${t.name} 闪避`);
                         else this.state.logs.push(`  ${t.name} -${t.damage}`);
                     });
                 } else if (result.type === 'pierce') {
-                    this.state.logs.push(`${this.state.selectedUnit.name} ${skill.name} 穿透攻击`);
+                    this.state.logs.push(`${attacker.name} ${skill.name} 穿透攻击`);
                     result.targets.forEach(t => {
+                        const tUnit = this.state.units.find(u => u.name === t.name && !u.dead);
+                        if (tUnit) {
+                            if (t.type === 'dodge') this.showFloatingText(tUnit.x, tUnit.y, '闪避', 'dodge');
+                            else {
+                                this.showFloatingText(tUnit.x, tUnit.y, `-${t.damage}`, 'damage');
+                                this.addHitAnimation(tUnit);
+                                if (tUnit.dead) this.addDeathAnimation(tUnit);
+                            }
+                        }
                         if (t.type === 'dodge') this.state.logs.push(`  ${t.name} 闪避`);
                         else this.state.logs.push(`  ${t.name} -${t.damage}`);
                     });
                 } else if (result.type === 'damage') {
-                    if (result.type === 'dodge') this.state.logs.push(`${unit.name} 闪避了！`);
-                    else if (unit.dead) this.state.logs.push(`${this.state.selectedUnit.name} 击杀 ${unit.name}`);
-                    else this.state.logs.push(`${this.state.selectedUnit.name} ${skill.name} ${unit.name} -${result.damage}`);
+                    this.addHitAnimation(unit);
+                    if (result.type === 'dodge') {
+                        this.state.logs.push(`${unit.name} 闪避了！`);
+                        this.showFloatingText(unit.x, unit.y, '闪避', 'dodge');
+                    } else if (unit.dead) {
+                        this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
+                        this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
+                        this.addDeathAnimation(unit);
+                    } else {
+                        this.state.logs.push(`${attacker.name} ${skill.name} ${unit.name} -${result.damage}`);
+                        this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
+                    }
                 } else if (result.type === 'poison') {
-                    this.state.logs.push(`${this.state.selectedUnit.name} 使 ${unit.name} 中毒`);
+                    this.state.logs.push(`${attacker.name} 使 ${unit.name} 中毒`);
+                    this.showFloatingText(unit.x, unit.y, '中毒', 'damage');
                 } else if (result.type === 'stun') {
-                    this.state.logs.push(`${this.state.selectedUnit.name} 眩晕 ${unit.name}`);
+                    this.state.logs.push(`${attacker.name} 眩晕 ${unit.name}`);
+                    this.showFloatingText(unit.x, unit.y, '眩晕', 'damage');
                 } else if (result.type === 'slow') {
-                    this.state.logs.push(`${this.state.selectedUnit.name} 减速 ${unit.name}`);
+                    this.state.logs.push(`${attacker.name} 减速 ${unit.name}`);
+                    this.showFloatingText(unit.x, unit.y, '减速', 'damage');
                 } else if (result.heal) {
-                    this.state.logs.push(`${this.state.selectedUnit.name} ${skill.name} 治疗${result.heal}`);
+                    this.state.logs.push(`${attacker.name} ${skill.name} 治疗${result.heal}`);
+                    this.showFloatingText(attacker.x, attacker.y, `+${result.heal}`, 'heal');
                 } else if (result.type === 'summon') {
-                    this.state.logs.push(`${this.state.selectedUnit.name} 召唤 ${result.unit.name}`);
+                    this.state.logs.push(`${attacker.name} 召唤 ${result.unit.name}`);
                 }
             }
-            this.state.selectedUnit.usedSkill = true;
+            attacker.usedSkill = true;
             this.state.currentSkill = null;
             this.clearHighlights();
             this.checkWin();
@@ -985,13 +1088,15 @@ const Game = {
             this.state.turn++;
             this.state.currentPlayer = 1;
             this.state.logs.push(`第${this.state.turn}回合 红方`);
+            this.showTurnBanner(`第${this.state.turn}回合 红方`);
         } else {
             this.state.currentPlayer = 2;
             this.state.logs.push('蓝方回合');
+            this.showTurnBanner('蓝方回合');
         }
 
         if (this.state.mode === 'pve' && this.state.currentPlayer === 2) {
-            setTimeout(() => this.aiTurn(), 500);
+            setTimeout(() => this.aiTurn(), 1200);
         } else {
             this.renderBattle();
         }

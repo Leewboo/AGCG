@@ -237,6 +237,7 @@ html, body {
 
 .cell.highlight-move {
     background: #9cd49c;
+    animation: pulse-move 1s infinite alternate;
 }
 .cell.highlight-move::after {
     content: '';
@@ -250,6 +251,7 @@ html, body {
 
 .cell.highlight-attack {
     background: #e88888;
+    animation: pulse-attack 1s infinite alternate;
 }
 
 .cell.highlight-attack-range {
@@ -262,11 +264,32 @@ html, body {
     height: 8px;
     background: #c04040;
     border-radius: 50%;
-    opacity: 0.5;
+    animation: pulse-dot 1s infinite alternate;
 }
 
 .cell.highlight-skill {
     background: #98a8e8;
+    animation: pulse-skill 1s infinite alternate;
+}
+
+@keyframes pulse-move {
+    from { background: #9cd49c; }
+    to { background: #7cc47c; }
+}
+
+@keyframes pulse-attack {
+    from { background: #e88888; }
+    to { background: #d06060; }
+}
+
+@keyframes pulse-skill {
+    from { background: #98a8e8; }
+    to { background: #7888d8; }
+}
+
+@keyframes pulse-dot {
+    from { opacity: 0.3; transform: scale(0.8); }
+    to { opacity: 0.8; transform: scale(1.2); }
 }
 
 .cell-label {
@@ -417,6 +440,97 @@ html, body {
 
 .sel-skill-info:hover {
     background: #000;
+}
+
+/* 飘字特效 */
+.float-text {
+    position: absolute;
+    font-size: 18px;
+    font-weight: bold;
+    pointer-events: none;
+    animation: float-up 0.8s ease-out forwards;
+    z-index: 20;
+    text-shadow: 1px 1px 0 #fff;
+}
+
+.float-text.damage { color: #c04040; }
+.float-text.heal { color: #40c040; }
+.float-text.dodge { color: #666; font-size: 14px; }
+.float-text.counter { color: #c08040; font-size: 14px; }
+
+@keyframes float-up {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(-30px); opacity: 0; }
+}
+
+/* 受击闪烁 */
+.unit.hit {
+    animation: hit-flash 0.3s ease;
+}
+
+@keyframes hit-flash {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(2) sepia(1) hue-rotate(-50deg) saturate(5); }
+}
+
+/* 攻击突进 */
+.unit.lunge-left { animation: lunge-left 0.2s ease; }
+.unit.lunge-right { animation: lunge-right 0.2s ease; }
+.unit.lunge-up { animation: lunge-up 0.2s ease; }
+.unit.lunge-down { animation: lunge-down 0.2s ease; }
+
+@keyframes lunge-left {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-6px); }
+}
+@keyframes lunge-right {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(6px); }
+}
+@keyframes lunge-up {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+@keyframes lunge-down {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(6px); }
+}
+
+/* 死亡消散 */
+.unit.dying {
+    animation: death-fade 0.5s ease forwards;
+}
+
+@keyframes death-fade {
+    to { transform: scale(0); opacity: 0; }
+}
+
+/* 回合横幅 */
+.turn-banner {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    font-weight: bold;
+    color: #000;
+    background: #e8e4d8;
+    border: 4px solid #666;
+    padding: 20px 40px;
+    z-index: 100;
+    animation: banner-in 0.3s ease;
+}
+
+.turn-banner.fade-out {
+    animation: banner-out 0.5s ease forwards;
+}
+
+@keyframes banner-in {
+    from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+@keyframes banner-out {
+    to { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
 }
 
 /* 武将栏 */
