@@ -819,6 +819,8 @@ const Game = {
                 const target = this.getUnit(p.x, p.y);
                 if (target && target.player !== unit.player) {
                     this.state.highlights.push({ x: p.x, y: p.y, type: 'attack' });
+                } else if (!target) {
+                    this.state.highlights.push({ x: p.x, y: p.y, type: 'attack-range' });
                 }
             });
         }

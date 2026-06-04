@@ -290,6 +290,19 @@ html, body {
     background: #e88888;
 }
 
+.cell.highlight-attack-range {
+    background: #f0c0c0;
+}
+.cell.highlight-attack-range::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: #c04040;
+    border-radius: 50%;
+    opacity: 0.5;
+}
+
 .cell.highlight-skill {
     background: #98a8e8;
 }
@@ -339,7 +352,7 @@ html, body {
 }
 
 .unit-icon {
-    font-size: 20px;
+    font-size: 16px;
     font-weight: bold;
     line-height: 1;
     white-space: nowrap;
