@@ -356,9 +356,16 @@ html, body {
 .sel-info-skills {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     flex: 1;
     overflow-x: auto;
+}
+
+.sel-skill-wrap {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
 }
 
 .sel-skill-btn {
@@ -371,8 +378,16 @@ html, body {
     font-weight: bold;
 }
 
-.sel-skill-btn.disabled {
-    opacity: 0.4;
+.sel-skill-btn.available {
+    background: #fff;
+    border-color: #000;
+    color: #000;
+}
+
+.sel-skill-btn.unavailable {
+    background: #e0e0e0;
+    border-color: #999;
+    color: #999;
     cursor: not-allowed;
 }
 
@@ -383,6 +398,25 @@ html, body {
     border: 2px dashed #666;
     white-space: nowrap;
     color: #666;
+}
+
+.sel-skill-info {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #666;
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    border-radius: 50%;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.sel-skill-info:hover {
+    background: #000;
 }
 
 /* 武将栏 */

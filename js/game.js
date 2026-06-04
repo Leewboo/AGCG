@@ -564,9 +564,19 @@ const Game = {
             <div class="sel-info-skills">
                 ${activeSkills.map(s => {
                     const canUse = u.sp >= s.spCost && !u.usedSkill;
-                    return `<button class="sel-skill-btn ${!canUse ? 'disabled' : ''}" data-skill="${s.id}">${s.name}(${s.spCost})</button>`;
+                    return `
+                        <div class="sel-skill-wrap">
+                            <button class="sel-skill-btn ${canUse ? 'available' : 'unavailable'}" data-skill="${s.id}">${s.name}(${s.spCost})</button>
+                            <span class="sel-skill-info" data-skill="${s.id}">i</span>
+                        </div>
+                    `;
                 }).join('')}
-                ${passiveSkills.map(s => `<span class="sel-passive">${s.name}</span>`).join('')}
+                ${passiveSkills.map(s => `
+                    <div class="sel-skill-wrap">
+                        <span class="sel-passive">${s.name}</span>
+                        <span class="sel-skill-info" data-skill="${s.id}">i</span>
+                    </div>
+                `).join('')}
             </div>
         `;
         container.querySelectorAll('.sel-skill-btn').forEach(btn => {
@@ -575,6 +585,14 @@ const Game = {
                 const sid = e.currentTarget.dataset.skill;
                 const skill = u.skills.find(s => s.id === sid);
                 if (skill && u.sp >= skill.spCost && !u.usedSkill) this.selectSkill(skill);
+            };
+        });
+        container.querySelectorAll('.sel-skill-info').forEach(el => {
+            el.onclick = (e) => {
+                e.stopPropagation();
+                const sid = e.currentTarget.dataset.skill;
+                const skill = u.skills.find(s => s.id === sid);
+                if (skill) alert(`${skill.name}\n类型: ${skill.type === 'passive' ? '被动' : '主动'}\n范围: ${skill.range || '-'}\nSP: ${skill.spCost || 0}\n${skill.desc}`);
             };
         });
     },
