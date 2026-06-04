@@ -358,12 +358,18 @@ const SUMMONS = {
     archer: { name: '弓手', hp: 30, atk: 12, def: 3, mov: 2 },
     wall: { name: '盾墙', hp: 80, atk: 0, def: 20, mov: 0 }
 };
+// 能量获取条件常量
+const ENERGY_ON_KILL = 1;      // 击杀敌人+1能量
+const ENERGY_ON_HURT = 1;      // 受到伤害+1能量
+const ENERGY_ON_TURN = 1;      // 回合开始+1能量
+const ENERGY_ON_ATTACK = 0;    // 普通攻击命中+0（可调整）
+
 const GENERALS = [
     {
         id: 'guanyu', name: '关羽', hp: 100, atk: 25, def: 15, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
-            { id: 'shred', name: '破甲斩', type: 'active', category: 'normal', range: '+2', spCost: 30, content(a,t) { const d = Effect.damage(a,t,25); Effect.shredDef(a,t,Math.floor(t.def*0.5),1); return {...d, msg:'破甲'}; }, desc: '十字2格，造成25伤害并降低目标50%防御1回合' },
+            { id: 'shred', name: '破甲斩', type: 'active', category: 'normal', range: '+2', energyCost: 2, content(a,t) { const d = Effect.damage(a,t,25); Effect.shredDef(a,t,Math.floor(t.def*0.5),1); return {...d, msg:'破甲'}; }, desc: '十字2格，造成25伤害并降低目标50%防御1回合' },
             { id: 'warrior', name: '武圣', type: 'passive', category: 'special', content(a) { Effect.setCounterRate(a, 0.3); }, desc: '30%概率反击' }
         ]
     },
@@ -371,15 +377,15 @@ const GENERALS = [
         id: 'zhugeliang', name: '诸葛亮', hp: 70, atk: 20, def: 10, mov: 2,
         moveRange: '+2', attackRange: '+2',
         skills: [
-            { id: 'fire', name: '火攻', type: 'active', category: 'normal', range: 'r2', spCost: 40, content(a,t) { const d = Effect.damage(a,t,18); Effect.burn(a,t,15,2); return {...d, msg:'燃烧'}; }, desc: '圆形2格，造成18伤害并附加燃烧（每回合15伤害，2回合）' },
-            { id: 'summonArcher', name: '借东风', type: 'active', category: 'summon', range: '+1', spCost: 40, summon: 'archer', content(a,pos,gs) { return Effect.summon(a,SUMMONS.archer,pos.x,pos.y,gs); }, desc: '召唤弓手' }
+            { id: 'fire', name: '火攻', type: 'active', category: 'normal', range: 'r2', energyCost: 3, content(a,t) { const d = Effect.damage(a,t,18); Effect.burn(a,t,15,2); return {...d, msg:'燃烧'}; }, desc: '圆形2格，造成18伤害并附加燃烧（每回合15伤害，2回合）' },
+            { id: 'summonArcher', name: '借东风', type: 'active', category: 'summon', range: '+1', energyCost: 3, summon: 'archer', content(a,pos,gs) { return Effect.summon(a,SUMMONS.archer,pos.x,pos.y,gs); }, desc: '召唤弓手' }
         ]
     },
     {
         id: 'zhaoyun', name: '赵云', hp: 85, atk: 22, def: 12, mov: 4,
         moveRange: '+4', attackRange: ['+1','x1'],
         skills: [
-            { id: 'lunge', name: '龙胆突刺', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a,t,gs) { const ox=a.x, oy=a.y; const d=Effect.damage(a,t,28); a.x=t.x; a.y=t.y; gs.logs.push(`${a.name} 突进`); return {...d, type:'lunge', fromX:ox, fromY:oy}; }, desc: '十字3格，突进到目标位置造成28伤害（可穿越敌人）' },
+            { id: 'lunge', name: '龙胆突刺', type: 'active', category: 'normal', range: '+3', energyCost: 2, content(a,t,gs) { const ox=a.x, oy=a.y; const d=Effect.damage(a,t,28); a.x=t.x; a.y=t.y; gs.logs.push(`${a.name} 突进`); return {...d, type:'lunge', fromX:ox, fromY:oy}; }, desc: '十字3格，突进到目标位置造成28伤害（可穿越敌人）' },
             { id: 'dodge', name: '七进七出', type: 'passive', category: 'special', content(a) { Effect.setDodgeRate(a, 0.25); }, desc: '25%概率闪避攻击' }
         ]
     },
@@ -387,53 +393,53 @@ const GENERALS = [
         id: 'zhangfei', name: '张飞', hp: 110, atk: 28, def: 18, mov: 2,
         moveRange: '+2', attackRange: '+1',
         skills: [
-            { id: 'roar', name: '震慑', type: 'active', category: 'normal', range: 'r1', spCost: 35, content(a,t) { const d=Effect.damage(a,t,30); Effect.stun(a,t,1); return {...d, msg:'眩晕'}; }, desc: '周围1格，造成30伤害并眩晕1回合' },
-            { id: 'stun', name: '震天怒吼', type: 'active', category: 'special', range: '+1', spCost: 30, content(a,t) { Effect.stun(a,t,1); return Effect.damage(a,t,15); }, desc: '眩晕1回合并造成15伤害' }
+            { id: 'roar', name: '震慑', type: 'active', category: 'normal', range: 'r1', energyCost: 3, content(a,t) { const d=Effect.damage(a,t,30); Effect.stun(a,t,1); return {...d, msg:'眩晕'}; }, desc: '周围1格，造成30伤害并眩晕1回合' },
+            { id: 'stun', name: '震天怒吼', type: 'active', category: 'special', range: '+1', energyCost: 2, content(a,t) { Effect.stun(a,t,1); return Effect.damage(a,t,15); }, desc: '眩晕1回合并造成15伤害' }
         ]
     },
     {
         id: 'huangzhong', name: '黄忠', hp: 75, atk: 26, def: 8, mov: 2,
         moveRange: '+2', attackRange: '+3',
-        skills: [{ id: 'snipe', name: '狙击', type: 'active', category: 'normal', range: '+4', spCost: 35, content(a,t) { return Effect.snipeDamage(a,t,22); }, desc: '十字4格，目标血量越低伤害越高（每缺20%血+5伤害）' }]
+        skills: [{ id: 'snipe', name: '狙击', type: 'active', category: 'normal', range: '+4', energyCost: 2, content(a,t) { return Effect.snipeDamage(a,t,22); }, desc: '十字4格，目标血量越低伤害越高（每缺20%血+5伤害）' }]
     },
     {
         id: 'machao', name: '马超', hp: 90, atk: 24, def: 10, mov: 4,
         moveRange: '+4', attackRange: '+1',
         skills: [
-            { id: 'charge', name: '冲锋', type: 'active', category: 'normal', range: '+3', spCost: 28, content(a,t,gs) { const d=Effect.executeDamage(a,t,28); if(d.extraTurn){ a.moved=false; a.attacked=false; gs.logs.push(`${a.name} 斩杀再动`); } return d; }, desc: '十字3格，造成28伤害，若击杀目标则再次行动' },
-            { id: 'slow', name: '践踏', type: 'active', category: 'special', range: 'r1', spCost: 25, content(a,t) { Effect.slow(a,t,1,2); return Effect.damage(a,t,15); }, desc: '减速1移动力2回合并造成15伤害' }
+            { id: 'charge', name: '冲锋', type: 'active', category: 'normal', range: '+3', energyCost: 2, content(a,t,gs) { const d=Effect.executeDamage(a,t,28); if(d.extraTurn){ a.moved=false; a.attacked=false; gs.logs.push(`${a.name} 斩杀再动`); } return d; }, desc: '十字3格，造成28伤害，若击杀目标则再次行动' },
+            { id: 'slow', name: '践踏', type: 'active', category: 'special', range: 'r1', energyCost: 1, content(a,t) { Effect.slow(a,t,1,2); return Effect.damage(a,t,15); }, desc: '减速1移动力2回合并造成15伤害' }
         ]
     },
     {
         id: 'caocao', name: '曹操', hp: 95, atk: 22, def: 14, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
-            { id: 'confuse', name: '离间', type: 'active', category: 'normal', range: 'r2', spCost: 30, content(a,t) { const d=Effect.damage(a,t,18); Effect.confuse(a,t,1); return {...d, msg:'混乱'}; }, desc: '圆形2格，造成18伤害并混乱1回合（攻击最近友军）' },
-            { id: 'ambition', name: '挟天子', type: 'active', category: 'special', range: 'r1', spCost: 35, content(a,t) { const d = Effect.damage(a,t,20); Effect.heal(a,a,15); return { ...d, heal: 15 }; }, desc: '吸血：20伤害 +15治疗' }
+            { id: 'confuse', name: '离间', type: 'active', category: 'normal', range: 'r2', energyCost: 2, content(a,t) { const d=Effect.damage(a,t,18); Effect.confuse(a,t,1); return {...d, msg:'混乱'}; }, desc: '圆形2格，造成18伤害并混乱1回合（攻击最近友军）' },
+            { id: 'ambition', name: '挟天子', type: 'active', category: 'special', range: 'r1', energyCost: 2, content(a,t) { const d = Effect.damage(a,t,20); Effect.heal(a,a,15); return { ...d, heal: 15 }; }, desc: '吸血：20伤害 +15治疗' }
         ]
     },
     {
         id: 'caoren', name: '曹仁', hp: 105, atk: 18, def: 22, mov: 2,
         moveRange: '+2', attackRange: '+1',
         skills: [
-            { id: 'defend', name: '铜墙铁壁', type: 'active', category: 'normal', range: '+1', spCost: 20, content(a,t) { Effect.buffDef(a,a,10,2); return Effect.damage(a,t,20); }, desc: '自身防御+10，攻击' },
-            { id: 'summonWall', name: '筑城', type: 'active', category: 'summon', range: '+1', spCost: 45, summon: 'wall', content(a,pos,gs) { return Effect.summon(a,SUMMONS.wall,pos.x,pos.y,gs); }, desc: '召唤盾墙' }
+            { id: 'defend', name: '铜墙铁壁', type: 'active', category: 'normal', range: '+1', energyCost: 1, content(a,t) { Effect.buffDef(a,a,10,2); return Effect.damage(a,t,20); }, desc: '自身防御+10，攻击' },
+            { id: 'summonWall', name: '筑城', type: 'active', category: 'summon', range: '+1', energyCost: 3, summon: 'wall', content(a,pos,gs) { return Effect.summon(a,SUMMONS.wall,pos.x,pos.y,gs); }, desc: '召唤盾墙' }
         ]
     },
     {
         id: 'sunce', name: '孙策', hp: 88, atk: 25, def: 11, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
-            { id: 'desperate', name: '背水', type: 'active', category: 'normal', range: '+2', spCost: 30, content(a,t) { return Effect.desperateDamage(a,t,25); }, desc: '十字2格，自身血量越低伤害越高（每缺25%血+5伤害）' },
-            { id: 'poison', name: '淬毒刃', type: 'active', category: 'special', range: '+1', spCost: 25, content(a,t) { Effect.poison(a,t,8,3); return Effect.damage(a,t,15); }, desc: '中毒每回合8伤害3回合并造成15伤害' }
+            { id: 'desperate', name: '背水', type: 'active', category: 'normal', range: '+2', energyCost: 2, content(a,t) { return Effect.desperateDamage(a,t,25); }, desc: '十字2格，自身血量越低伤害越高（每缺25%血+5伤害）' },
+            { id: 'poison', name: '淬毒刃', type: 'active', category: 'special', range: '+1', energyCost: 1, content(a,t) { Effect.poison(a,t,8,3); return Effect.damage(a,t,15); }, desc: '中毒每回合8伤害3回合并造成15伤害' }
         ]
     },
     {
         id: 'sunshangxiang', name: '孙尚香', hp: 72, atk: 23, def: 9, mov: 3,
         moveRange: '+3', attackRange: ['+2','x2'],
         skills: [
-            { id: 'multishot', name: '连珠', type: 'active', category: 'normal', range: '+3', spCost: 25, content(a,t) { return Effect.multiShot(a,t,2,Math.floor(a.atk*0.6)); }, desc: '十字3格，连续射击2次（每次60%攻击）' },
-            { id: 'summonSoldier', name: '练兵', type: 'active', category: 'summon', range: '+1', spCost: 25, summon: 'soldier', content(a,pos,gs) { return Effect.summon(a,SUMMONS.soldier,pos.x,pos.y,gs); }, desc: '召唤士兵' }
+            { id: 'multishot', name: '连珠', type: 'active', category: 'normal', range: '+3', energyCost: 2, content(a,t) { return Effect.multiShot(a,t,2,Math.floor(a.atk*0.6)); }, desc: '十字3格，连续射击2次（每次60%攻击）' },
+            { id: 'summonSoldier', name: '练兵', type: 'active', category: 'summon', range: '+1', energyCost: 1, summon: 'soldier', content(a,pos,gs) { return Effect.summon(a,SUMMONS.soldier,pos.x,pos.y,gs); }, desc: '召唤士兵' }
         ]
     }
 ];
@@ -539,7 +545,7 @@ const Game = {
                 if (g) {
                     const moveRangeStr = Array.isArray(g.moveRange) ? g.moveRange.join(', ') : g.moveRange;
                     const attackRangeStr = Array.isArray(g.attackRange) ? g.attackRange.join(', ') : g.attackRange;
-                    const skillsDesc = g.skills.map(s => `${s.name}(${s.type === 'passive' ? '被动' : '主动'}${s.spCost ? ` SP:${s.spCost}` : ''}): ${s.desc}`).join('\n');
+                    const skillsDesc = g.skills.map(s => `${s.name}(${s.type === 'passive' ? '被动' : '主动'}${s.energyCost ? ` 能量:${s.energyCost}` : ''}): ${s.desc}`).join('\n');
                     alert(`${g.name}\nHP: ${g.hp} | 攻: ${g.atk} | 防: ${g.def} | 移: ${g.mov}\n移动范围: ${moveRangeStr}\n攻击范围: ${attackRangeStr}\n\n技能:\n${skillsDesc}`);
                 }
             };
@@ -677,7 +683,7 @@ const Game = {
             atk: general.atk, def: general.def, mov: general.mov,
             moveRange: general.moveRange || '+' + general.mov,
             attackRange: general.attackRange || '+1',
-            sp: 100, maxSp: 100,
+            energy: 0,
             skills: general.skills ? [...general.skills] : [],
             dead: false, moved: false, attacked: false, usedSkill: false
         };
@@ -723,7 +729,7 @@ const Game = {
                 atk: g.atk, def: g.def, mov: g.mov,
                 moveRange: g.moveRange || '+' + g.mov,
                 attackRange: g.attackRange || '+1',
-                sp: 100, maxSp: 100,
+                energy: 0,
                 skills: g.skills ? [...g.skills] : [],
                 dead: false, moved: false, attacked: false, usedSkill: false
             };
@@ -810,10 +816,10 @@ const Game = {
         container.innerHTML = `
             <div class="sel-info-skills">
                 ${activeSkills.map(s => {
-                    const canUse = u.sp >= s.spCost && !u.usedSkill;
+                    const canUse = u.energy >= s.energyCost && !u.usedSkill;
                     return `
                         <div class="sel-skill-wrap">
-                            <button class="sel-skill-btn ${canUse ? 'available' : 'unavailable'}" data-skill="${s.id}">${s.name}(${s.spCost})</button>
+                            <button class="sel-skill-btn ${canUse ? 'available' : 'unavailable'}" data-skill="${s.id}">${s.name}(${s.energyCost}能量)</button>
                             <span class="sel-skill-info" data-skill="${s.id}">i</span>
                         </div>
                     `;
@@ -831,7 +837,7 @@ const Game = {
                 e.stopPropagation();
                 const sid = e.currentTarget.dataset.skill;
                 const skill = u.skills.find(s => s.id === sid);
-                if (skill && u.sp >= skill.spCost && !u.usedSkill) this.selectSkill(skill);
+                if (skill && u.energy >= skill.energyCost && !u.usedSkill) this.selectSkill(skill);
             };
         });
         container.querySelectorAll('.sel-skill-info').forEach(el => {
@@ -839,7 +845,7 @@ const Game = {
                 e.stopPropagation();
                 const sid = e.currentTarget.dataset.skill;
                 const skill = u.skills.find(s => s.id === sid);
-                if (skill) alert(`${skill.name}\n类型: ${skill.type === 'passive' ? '被动' : '主动'}\n范围: ${skill.range || '-'}\nSP: ${skill.spCost || 0}\n${skill.desc}`);
+                if (skill) alert(`${skill.name}\n类型: ${skill.type === 'passive' ? '被动' : '主动'}\n范围: ${skill.range || '-'}\n能量: ${skill.energyCost || 0}\n${skill.desc}`);
             };
         });
     },
@@ -860,6 +866,7 @@ const Game = {
                         <div class="bar-general-hp">
                             <div class="bar-general-hp-fill" style="width: ${hpPercent}%"></div>
                         </div>
+                        <span class="bar-general-energy">${u.energy}</span>
                         <span class="bar-general-info" data-unit-id="${u.id}">i</span>
                     </div>
                 `;
@@ -917,7 +924,7 @@ const Game = {
         if (unit.dodgeRate) debuffHtml += `<br>闪避率: ${Math.floor(unit.dodgeRate * 100)}%`;
 
         statsEl.innerHTML = `
-            HP: ${unit.hp}/${unit.maxHp} | SP: ${unit.sp}/${unit.maxSp}<br>
+            HP: ${unit.hp}/${unit.maxHp} | 能量: ${unit.energy}<br>
             攻击: ${unit.atk} | 防御: ${unit.def} | 移动: ${unit.mov}<br>
             移动范围: ${moveRangeStr}<br>
             攻击范围: ${attackRangeStr}
@@ -927,7 +934,7 @@ const Game = {
         const skills = unit.skills || [];
         skillsEl.innerHTML = skills.map(s => `
             <div class="skill-item">
-                <div class="skill-name">${s.name} ${s.type === 'passive' ? '(被动)' : ''} - ${s.spCost ? `SP:${s.spCost}` : ''}</div>
+                <div class="skill-name">${s.name} ${s.type === 'passive' ? '(被动)' : ''} - ${s.energyCost ? `能量:${s.energyCost}` : ''}</div>
                 <div class="skill-desc">${s.desc}</div>
             </div>
         `).join('') || '<div>无技能</div>';
@@ -1034,14 +1041,27 @@ const Game = {
                 if (unit.dead) {
                     this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
                     this.addDeathAnimation(unit);
+                    // 击杀获得能量
+                    attacker.energy += ENERGY_ON_KILL;
+                    this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_KILL}能量`, 'heal');
                 } else {
                     this.state.logs.push(`${attacker.name} 攻击 ${unit.name} -${result.damage}`);
                 }
+            }
+            // 受击方获得能量
+            if (!unit.dead && ENERGY_ON_HURT > 0) {
+                unit.energy += ENERGY_ON_HURT;
+                this.showFloatingText(unit.x, unit.y, `+${ENERGY_ON_HURT}能量`, 'heal');
             }
             if (result.counter) {
                 this.state.logs.push(`${unit.name} 反击 -${result.counter}`);
                 this.showFloatingText(attacker.x, attacker.y, `反击-${result.counter}`, 'counter');
                 this.addHitAnimation(attacker);
+                // 反击受击也获得能量
+                if (!attacker.dead && ENERGY_ON_HURT > 0) {
+                    attacker.energy += ENERGY_ON_HURT;
+                    this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_HURT}能量`, 'heal');
+                }
             }
             attacker.attacked = true;
             this.clearHighlights();
@@ -1053,7 +1073,7 @@ const Game = {
         if (hlSkill && this.state.selectedUnit && this.state.currentSkill) {
             const skill = this.state.currentSkill;
             const attacker = this.state.selectedUnit;
-            attacker.sp -= skill.spCost;
+            attacker.energy -= skill.energyCost;
             if (skill.category === 'summon') {
                 if (!this.getUnit(x, y)) {
                     skill.content(attacker, { x, y }, this.state);
@@ -1204,7 +1224,10 @@ const Game = {
     endTurn() {
         this.state.units.forEach(u => {
             u.moved = false; u.attacked = false; u.usedSkill = false;
-            u.sp = Math.min(u.maxSp, u.sp + 20);
+            // 回合开始获得能量
+            if (!u.dead && ENERGY_ON_TURN > 0) {
+                u.energy += ENERGY_ON_TURN;
+            }
             // Buff 结算
             if (u.buffs) {
                 const newBuffs = [];
@@ -1314,7 +1337,9 @@ const Game = {
         setTimeout(() => {
             this.state.units.forEach(u => {
                 u.moved = false; u.attacked = false; u.usedSkill = false;
-                u.sp = Math.min(u.maxSp, u.sp + 20);
+                if (!u.dead && ENERGY_ON_TURN > 0) {
+                    u.energy += ENERGY_ON_TURN;
+                }
             });
             this.state.turn++;
             this.state.currentPlayer = 1;
