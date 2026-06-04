@@ -1,6 +1,8 @@
 // ================================
 // 游戏数据
 // ================================
+import { Effect } from './effect.js';
+
 export const BOARD_SIZE = 12;
 
 export const TERRAIN = [
