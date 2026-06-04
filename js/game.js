@@ -566,6 +566,10 @@ const Game = {
     },
 
     handleBattleClick(x, y) {
+        this.state.logs.push(`点击位置: (${x},${y})`);
+        this.state.logs.push(`当前状态: selectedUnit=${!!this.state.selectedUnit}, currentSkill=${!!this.state.currentSkill}, skillStep=${this.state.skillStep}`);
+        this.state.logs.push(`当前高亮: ${this.state.highlights.map(h => `(${h.x},${h.y})-${h.type}`).join(' ')}`);
+        
         const unit = this.getUnit(x, y);
         const hlMove = this.state.highlights.find(h => h.x === x && h.y === y && h.type === 'move');
         const hlAttack = this.state.highlights.find(h => h.x === x && h.y === y && h.type === 'attack');
@@ -685,6 +689,7 @@ const Game = {
                             this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
                         }
                     });
+                    this.state.logs.push(`已高亮的落点: ${this.state.highlights.map(p => `(${p.x},${p.y})`).join(' ')}`);
                     this.state.logs.push(`${attacker.name} 选择落点...`);
                     this.renderBattle();
                 }
