@@ -163,44 +163,6 @@ html, body {
     padding: 8px 10px;
 }
 
-.battle-main {
-    flex: 1;
-    display: flex;
-    gap: 12px;
-    min-height: 0;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.side-panel {
-    width: 220px;
-    height: auto;
-    max-height: 100%;
-    overflow-y: auto;
-    background: #e8e4d8;
-    border: 3px solid #666;
-    padding: 10px;
-    flex-shrink: 0;
-}
-
-.skill-btn {
-    display: block;
-    width: 100%;
-    margin-bottom: 8px;
-    padding: 8px;
-    font-size: 14px;
-    background: #fff;
-    border: 2px solid #000;
-    cursor: pointer;
-    text-align: left;
-}
-
-.skill-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
 .log-panel {
     height: 80px;
     overflow-y: auto;
@@ -389,40 +351,6 @@ html, body {
 
 .selected-info.hidden {
     display: none;
-}
-
-.sel-info-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-}
-
-.sel-info-name {
-    font-size: 16px;
-    font-weight: bold;
-    min-width: 48px;
-}
-
-.sel-info-name.p1 { color: #c04040; }
-.sel-info-name.p2 { color: #4080c0; }
-
-.sel-info-hp {
-    width: 60px;
-    height: 8px;
-    background: #000;
-    flex-shrink: 0;
-}
-
-.sel-info-hp-fill {
-    height: 100%;
-    background: #40c040;
-}
-
-.sel-info-stat {
-    font-size: 13px;
-    font-weight: 500;
-    white-space: nowrap;
 }
 
 .sel-info-skills {
@@ -702,16 +630,12 @@ html, body {
     .cell { width: 36px; height: 36px; font-size: 18px; }
     .unit-icon { font-size: 16px; }
     .bar-general-name { font-size: 12px; }
-    .side-panel { width: 180px; }
 }
 
 @media (max-width: 480px) {
     .board { grid-template-columns: repeat(10, 32px); grid-template-rows: repeat(10, 32px); }
     .cell { width: 32px; height: 32px; font-size: 14px; }
     .unit-icon { font-size: 14px; }
-    .battle-main { gap: 6px; }
-    .side-panel { width: 140px; padding: 6px; }
-    .skill-btn { font-size: 12px; padding: 6px; }
     .player-label { font-size: 14px; min-width: 40px; }
     .bar-general { padding: 3px 5px; gap: 3px; }
     .bar-general-name { font-size: 11px; }
@@ -722,27 +646,7 @@ html, body {
     .board { grid-template-columns: repeat(10, 28px); grid-template-rows: repeat(10, 28px); gap: 1px; }
     .cell { width: 28px; height: 28px; font-size: 12px; }
     .unit-icon { font-size: 11px; }
-    .side-panel { width: 110px; padding: 4px; }
-    .skill-btn { font-size: 11px; padding: 4px; margin-bottom: 4px; }
     .player-label { font-size: 12px; min-width: 36px; }
     .bar-general-name { font-size: 10px; }
     .log-panel { height: 60px; font-size: 11px; }
-}
-
-/* 手机竖屏：面板放到底部 */
-@media (max-width: 600px) {
-    .battle-main {
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-    }
-    .side-panel {
-        width: 100%;
-        max-width: 320px;
-        max-height: 120px;
-        order: 2;
-    }
-    .board-wrapper {
-        order: 1;
-    }
 }

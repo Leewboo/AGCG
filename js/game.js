@@ -507,7 +507,6 @@ const Game = {
     renderBattle() {
         const info = document.getElementById('turn-info');
         const board = document.getElementById('battle-board');
-        const panel = document.getElementById('panel');
         const log = document.getElementById('log-panel');
 
         if (info) info.textContent = `第${this.state.turn}回合 ${this.state.currentPlayer === 1 ? '红方' : '蓝方'}`;
@@ -544,40 +543,12 @@ const Game = {
         }
 
         this.renderPlayerBars();
-        this.renderSelectedInfo();
-
-        if (panel) {
-            if (this.state.selectedUnit) {
-                const u = this.state.selectedUnit;
-                const activeSkills = u.skills ? u.skills.filter(s => s.type === 'active') : [];
-                panel.innerHTML = `
-                    <div class="detail-name">${u.name}</div>
-                    <div class="detail-stats">
-                        HP: ${u.hp}/${u.maxHp} | SP: ${u.sp}/${u.maxSp}<br>
-                        攻: ${u.atk} | 防: ${u.def} | 移: ${u.mov}
-                    </div>
-                    ${activeSkills.map(s => {
-                        const canUse = u.sp >= s.spCost && !u.usedSkill;
-                        return `<button class="skill-btn" data-skill="${s.id}" ${!canUse ? 'disabled' : ''}>${s.name}(${s.spCost}) - ${s.desc}</button>`;
-                    }).join('')}
-                `;
-                panel.querySelectorAll('.skill-btn').forEach(btn => {
-                    btn.onclick = (e) => {
-                        e.stopPropagation();
-                        const sid = e.currentTarget.dataset.skill;
-                        const skill = u.skills.find(s => s.id === sid);
-                        if (u.sp >= skill.spCost && !u.usedSkill) this.selectSkill(skill);
-                    };
-                });
-            } else {
-                panel.innerHTML = '';
-            }
-        }
+        this.renderSelectedSkills();
 
         if (log) log.innerHTML = this.state.logs.slice(-8).map(l => `<div class="log-entry">${l}</div>`).join('');
     },
 
-    renderSelectedInfo() {
+    renderSelectedSkills() {
         const container = document.getElementById('selected-info');
         if (!container) return;
         const u = this.state.selectedUnit;
@@ -586,20 +557,10 @@ const Game = {
             return;
         }
         container.classList.remove('hidden');
-        const hpPercent = (u.hp / u.maxHp * 100).toFixed(0);
         const skills = u.skills || [];
         const activeSkills = skills.filter(s => s.type === 'active');
         const passiveSkills = skills.filter(s => s.type === 'passive');
         container.innerHTML = `
-            <div class="sel-info-left">
-                <span class="sel-info-name p${u.player}">${u.name}</span>
-                <div class="sel-info-hp"><div class="sel-info-hp-fill" style="width:${hpPercent}%"></div></div>
-                <span class="sel-info-stat">HP:${u.hp}/${u.maxHp}</span>
-                <span class="sel-info-stat">SP:${u.sp}/${u.maxSp}</span>
-                <span class="sel-info-stat">攻:${u.atk}</span>
-                <span class="sel-info-stat">防:${u.def}</span>
-                <span class="sel-info-stat">移:${u.mov}</span>
-            </div>
             <div class="sel-info-skills">
                 ${activeSkills.map(s => {
                     const canUse = u.sp >= s.spCost && !u.usedSkill;
@@ -672,12 +633,15 @@ const Game = {
         const skillsEl = document.getElementById('detail-skills');
 
         nameEl.textContent = unit.name;
+
+        const moveRangeStr = Array.isArray(unit.moveRange) ? unit.moveRange.join(', ') : unit.moveRange;
+        const attackRangeStr = Array.isArray(unit.attackRange) ? unit.attackRange.join(', ') : unit.attackRange;
+
         statsEl.innerHTML = `
-            HP: ${unit.hp}/${unit.maxHp}<br>
-            SP: ${unit.sp}/${unit.maxSp}<br>
-            攻击: ${unit.atk}<br>
-            防御: ${unit.def}<br>
-            移动: ${unit.mov}
+            HP: ${unit.hp}/${unit.maxHp} | SP: ${unit.sp}/${unit.maxSp}<br>
+            攻击: ${unit.atk} | 防御: ${unit.def} | 移动: ${unit.mov}<br>
+            移动范围: ${moveRangeStr}<br>
+            攻击范围: ${attackRangeStr}
         `;
 
         const skills = unit.skills || [];
