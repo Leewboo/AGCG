@@ -51,7 +51,6 @@ export const GENERALS = [
                 type: 'passive',
                 category: 'special',
                 content(a, t, gs) {
-                    // 被动在击杀时触发，由game.js在击杀检测中调用
                     a._passive_changSheng = true;
                     return { type: 'passive' };
                 },
@@ -63,15 +62,21 @@ export const GENERALS = [
                 type: 'active',
                 category: 'special',
                 range: '+4',
-                // 胆勇不是充能技，无 energyCost
-                multiStep: true,
+                // 胆勇不是充能技
+                // 两步选择：先选敌人，再选落点
+                step1: 'selectEnemy',   // 第一步：选择敌方棋子
                 step1Range: '+4',
+                step2: 'selectLanding', // 第二步：选择落点
                 step2Range: 'r2',
+                // content 在第二步执行，接收落点坐标
                 content(a, t, gs, landingPos) {
                     // landingPos 是 {x, y} 落点
-                    return Effect.dashDamage(a, t, 30, landingPos.x, landingPos.y);
+                    // 先移动，再造成伤害
+                    const moveResult = Effect.moveTo(a, landingPos.x, landingPos.y);
+                    const dmgResult = Effect.damage(a, t, 30);
+                    return { ...dmgResult, type: 'danYong', move: moveResult };
                 },
-                desc: '主动：十字4格选择敌方棋子，然后在其r2范围内选择一个空格作为落点，造成30伤害（每回合限用一次）'
+                desc: '主动：十字4格选择敌方棋子，然后在其r2范围内选择一个空格作为落点，突进造成30伤害（每回合限用一次）'
             }
         ]
     },

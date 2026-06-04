@@ -176,5 +176,20 @@ export const Effect = {
         attacker.y = toY;
         const r = this.damage(attacker, target, damage);
         return { ...r, type: 'dash' };
+    },
+    // 选择落点：返回目标周围指定范围内的空格列表
+    selectLanding(target, rangeStr, gameState) {
+        const { Range } = gameState._modules || {};
+        if (!Range) return { type: 'selectLanding', positions: [] };
+        const positions = Range.parse(rangeStr, target.x, target.y).filter(p => {
+            return !gameState.units.find(u => u.x === p.x && u.y === p.y && !u.dead);
+        });
+        return { type: 'selectLanding', positions, target };
+    },
+    // 移动到指定坐标
+    moveTo(unit, x, y) {
+        unit.x = x;
+        unit.y = y;
+        return { type: 'moveTo', x, y };
     }
 };
