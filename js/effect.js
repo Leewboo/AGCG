@@ -163,5 +163,18 @@ export const Effect = {
             if (target.dead) break;
         }
         return { damage: total, type: 'multishot', hits: details.length, details };
+    },
+    // 立即获得一次额外行动机会（移动+攻击）
+    grantExtraAction(target) {
+        target.moved = false;
+        target.attacked = false;
+        return { type: 'extraAction' };
+    },
+    // 突进伤害：先位移到指定位置，再对目标造成伤害
+    dashDamage(attacker, target, damage, toX, toY) {
+        attacker.x = toX;
+        attacker.y = toY;
+        const r = this.damage(attacker, target, damage);
+        return { ...r, type: 'dash' };
     }
 };

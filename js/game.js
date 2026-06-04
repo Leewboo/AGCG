@@ -16,6 +16,8 @@ const Game = {
         turn: 1,
         selectedUnit: null,
         currentSkill: null,
+        skillStep: 0,          // 多步技能的当前步骤
+        skillTarget: null,     // 多步技能第一步选中的目标
         highlights: [],
         logs: [],
         units: [],
@@ -591,6 +593,12 @@ const Game = {
                     this.addDeathAnimation(unit);
                     attacker.energy += ENERGY_ON_KILL;
                     this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_KILL}能量`, 'heal');
+                    // 常胜被动：击杀敌方武将获得额外行动
+                    if (attacker._passive_changSheng && unit.generalId) {
+                        Effect.grantExtraAction(attacker);
+                        this.state.logs.push(`${attacker.name} 常胜！获得额外行动`);
+                        this.showFloatingText(attacker.x, attacker.y, '常胜！', 'heal');
+                    }
                 } else {
                     this.state.logs.push(`${attacker.name} 攻击 ${unit.name} -${result.damage}`);
                 }
@@ -618,6 +626,67 @@ const Game = {
         if (hlSkill && this.state.selectedUnit && this.state.currentSkill) {
             const skill = this.state.currentSkill;
             const attacker = this.state.selectedUnit;
+
+            // 多步技能：第一步选目标
+            if (skill.multiStep && this.state.skillStep === 0) {
+                if (unit && unit.player !== attacker.player) {
+                    this.state.skillTarget = unit;
+                    this.state.skillStep = 1;
+                    this.state.highlights = [];
+                    // 第二步：显示目标周围r2范围内的空格
+                    const landingRange = Range.parse(skill.step2Range || 'r2', unit.x, unit.y);
+                    landingRange.forEach(p => {
+                        if (!this.getUnit(p.x, p.y)) {
+                            this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
+                        }
+                    });
+                    this.state.logs.push(`${attacker.name} 选择落点...`);
+                    this.renderBattle();
+                }
+                return;
+            }
+
+            // 多步技能：第二步选落点
+            if (skill.multiStep && this.state.skillStep === 1) {
+                const target = this.state.skillTarget;
+                if (!target || target.dead) {
+                    this.state.currentSkill = null;
+                    this.state.skillStep = 0;
+                    this.state.skillTarget = null;
+                    this.clearHighlights();
+                    this.renderBattle();
+                    return;
+                }
+                // 检查落点是否在目标r2范围内且为空
+                const landingRange = Range.parse(skill.step2Range || 'r2', target.x, target.y);
+                const valid = landingRange.find(p => p.x === x && p.y === y);
+                if (!valid || this.getUnit(x, y)) {
+                    this.state.logs.push('无效的落点');
+                    return;
+                }
+                attacker.energy -= skill.energyCost;
+                const result = skill.content(attacker, target, this.state, { x, y });
+                // 处理 dash 结果
+                this.addHitAnimation(target);
+                if (target.dead) {
+                    this.state.logs.push(`${attacker.name} 胆勇击杀 ${target.name}`);
+                    this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
+                    this.addDeathAnimation(target);
+                } else {
+                    this.state.logs.push(`${attacker.name} 胆勇 ${target.name} -${result.damage}`);
+                    this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
+                }
+                attacker.usedSkill = true;
+                this.state.currentSkill = null;
+                this.state.skillStep = 0;
+                this.state.skillTarget = null;
+                this.clearHighlights();
+                this.checkWin();
+                this.renderBattle();
+                return;
+            }
+
+            // 普通单步技能
             attacker.energy -= skill.energyCost;
             if (skill.category === 'summon') {
                 if (!this.getUnit(x, y)) {
@@ -656,12 +725,20 @@ const Game = {
                         if (t.type === 'dodge') this.state.logs.push(`  ${t.name} 闪避`);
                         else this.state.logs.push(`  ${t.name} -${t.damage}`);
                     });
-                } else if (result.type === 'damage') {
+                } else if (result.type === 'damage' || result.type === 'dash') {
                     this.addHitAnimation(unit);
                     if (unit.dead) {
                         this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
                         this.addDeathAnimation(unit);
+                        attacker.energy += ENERGY_ON_KILL;
+                        this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_KILL}能量`, 'heal');
+                        // 常胜被动：击杀敌方武将获得额外行动
+                        if (attacker._passive_changSheng && unit.generalId) {
+                            Effect.grantExtraAction(attacker);
+                            this.state.logs.push(`${attacker.name} 常胜！获得额外行动`);
+                            this.showFloatingText(attacker.x, attacker.y, '常胜！', 'heal');
+                        }
                     } else {
                         this.state.logs.push(`${attacker.name} ${skill.name} ${unit.name} -${result.damage}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
@@ -706,6 +783,8 @@ const Game = {
             }
             this.state.selectedUnit = unit;
             this.state.currentSkill = null;
+            this.state.skillStep = 0;
+            this.state.skillTarget = null;
             this.showMoves(unit);
             this.renderBattle();
             return;
@@ -713,6 +792,8 @@ const Game = {
 
         this.state.selectedUnit = null;
         this.state.currentSkill = null;
+        this.state.skillStep = 0;
+        this.state.skillTarget = null;
         this.clearHighlights();
         this.renderBattle();
     },
@@ -720,8 +801,25 @@ const Game = {
     selectSkill(skill) {
         if (!this.state.selectedUnit) return;
         this.state.currentSkill = skill;
+        this.state.skillStep = 0;
+        this.state.skillTarget = null;
         this.state.highlights = [];
         const u = this.state.selectedUnit;
+
+        // 多步技能：第一步选择目标敌人
+        if (skill.multiStep) {
+            const range = Range.parse(skill.step1Range || skill.range, u.x, u.y);
+            range.forEach(p => {
+                const target = this.getUnit(p.x, p.y);
+                if (target && target.player !== u.player) {
+                    this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
+                }
+            });
+            this.state.logs.push(`${u.name} 选择胆勇目标...`);
+            this.renderBattle();
+            return;
+        }
+
         const range = Range.parse(skill.range, u.x, u.y);
         if (skill.category === 'summon') {
             range.forEach(p => {

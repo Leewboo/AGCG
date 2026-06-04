@@ -33,41 +33,110 @@ export const ENERGY_ON_HURT = 1;
 export const ENERGY_ON_TURN = 1;
 export const ENERGY_ON_ATTACK = 0;
 
-// 仅保留一个调试武将
+// 武将数据
 export const GENERALS = [
     {
-        id: 'debug',
-        name: '调试将',
-        hp: 100,
-        atk: 20,
-        def: 10,
+        id: 'zhaoyun',
+        name: '赵云',
+        hp: 180,
+        atk: 50,
+        def: 20,
         mov: 3,
         moveRange: '+3',
         attackRange: '+1',
         skills: [
             {
-                id: 'testDmg',
-                name: '测试打击',
-                type: 'active',
-                category: 'normal',
-                range: '+2',
-                energyCost: 1,
-                content(a, t, gs) {
-                    return { damage: 10, type: 'damage' };
-                },
-                desc: '十字2格，造成10点伤害（调试用）'
-            },
-            {
-                id: 'testPassive',
-                name: '调试被动',
+                id: 'changSheng',
+                name: '常胜',
                 type: 'passive',
                 category: 'special',
-                content(a) {
-                    a.atk += 5;
-                    return { type: 'passive', msg: '攻击力+5' };
+                content(a, t, gs) {
+                    // 被动在击杀时触发，由game.js在击杀检测中调用
+                    a._passive_changSheng = true;
+                    return { type: 'passive' };
                 },
-                desc: '被动：攻击力+5'
+                desc: '被动：击杀敌方武将时，立即获得一次移动和攻击机会'
+            },
+            {
+                id: 'danYong',
+                name: '胆勇',
+                type: 'active',
+                category: 'special',
+                range: '+4',
+                energyCost: 3,
+                // 两步选择技能：step1选敌人，step2选落点
+                multiStep: true,
+                step1Range: '+4',
+                step2Range: 'r2',
+                content(a, t, gs, landingPos) {
+                    // landingPos 是 {x, y} 落点
+                    return Effect.dashDamage(a, t, 30, landingPos.x, landingPos.y);
+                },
+                desc: '主动：十字4格选择敌方棋子，然后在其r2范围内选择一个空格作为落点，造成30伤害'
             }
+        ]
+    },
+    {
+        id: 'debug1', name: '调试将甲', hp: 100, atk: 20, def: 10, mov: 3,
+        moveRange: '+3', attackRange: '+1',
+        skills: [
+            { id: 'testDmg1', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+        ]
+    },
+    {
+        id: 'debug2', name: '调试将乙', hp: 110, atk: 22, def: 12, mov: 2,
+        moveRange: '+2', attackRange: '+1',
+        skills: [
+            { id: 'testDmg2', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+        ]
+    },
+    {
+        id: 'debug3', name: '调试将丙', hp: 90, atk: 25, def: 8, mov: 3,
+        moveRange: '+3', attackRange: '+1',
+        skills: [
+            { id: 'testDmg3', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+        ]
+    },
+    {
+        id: 'debug4', name: '调试将丁', hp: 120, atk: 18, def: 15, mov: 2,
+        moveRange: '+2', attackRange: '+1',
+        skills: [
+            { id: 'testDmg4', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+        ]
+    },
+    {
+        id: 'debug5', name: '调试将戊', hp: 95, atk: 24, def: 11, mov: 3,
+        moveRange: '+3', attackRange: '+1',
+        skills: [
+            { id: 'testDmg5', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+        ]
+    },
+    {
+        id: 'debug6', name: '调试将己', hp: 105, atk: 19, def: 14, mov: 3,
+        moveRange: '+3', attackRange: '+1',
+        skills: [
+            { id: 'testDmg6', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+        ]
+    },
+    {
+        id: 'debug7', name: '调试将庚', hp: 85, atk: 28, def: 9, mov: 4,
+        moveRange: '+4', attackRange: '+1',
+        skills: [
+            { id: 'testDmg7', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+        ]
+    },
+    {
+        id: 'debug8', name: '调试将辛', hp: 115, atk: 17, def: 18, mov: 2,
+        moveRange: '+2', attackRange: '+1',
+        skills: [
+            { id: 'testDmg8', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+        ]
+    },
+    {
+        id: 'debug9', name: '调试将壬', hp: 100, atk: 21, def: 13, mov: 3,
+        moveRange: '+3', attackRange: '+1',
+        skills: [
+            { id: 'testDmg9', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
         ]
     }
 ];
