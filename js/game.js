@@ -574,6 +574,8 @@ const Game = {
         const hlMove = this.state.highlights.find(h => h.x === x && h.y === y && h.type === 'move');
         const hlAttack = this.state.highlights.find(h => h.x === x && h.y === y && h.type === 'attack');
         const hlSkill = this.state.highlights.find(h => h.x === x && h.y === y && h.type === 'skill');
+        
+        this.state.logs.push(`hlSkill: ${!!hlSkill}, hlMove: ${!!hlMove}, hlAttack: ${!!hlAttack}`);
 
         if (hlMove && this.state.selectedUnit) {
             this.state.selectedUnit.x = x;
@@ -631,6 +633,7 @@ const Game = {
         }
 
         if (hlSkill && this.state.selectedUnit && this.state.currentSkill) {
+            this.state.logs.push('进入 hlSkill 分支');
             const skill = this.state.currentSkill;
             const attacker = this.state.selectedUnit;
 
