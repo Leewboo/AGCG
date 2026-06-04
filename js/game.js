@@ -781,9 +781,7 @@ const Game = {
     // 特效系统
     // ================================
     showFloatingText(x, y, text, type) {
-        const board = document.getElementById('battle-board');
-        if (!board) return;
-        const cell = board.children[y * 10 + x];
+        const cell = document.querySelector(`#battle-board .cell[data-x="${x}"][data-y="${y}"]`);
         if (!cell) return;
         const el = document.createElement('div');
         el.className = `float-text ${type}`;
@@ -804,9 +802,7 @@ const Game = {
     },
 
     addLungeAnimation(attacker, target) {
-        const board = document.getElementById('battle-board');
-        if (!board) return;
-        const cell = board.children[attacker.y * 10 + attacker.x];
+        const cell = document.querySelector(`#battle-board .cell[data-x="${attacker.x}"][data-y="${attacker.y}"]`);
         if (!cell) return;
         const unitEl = cell.querySelector('.unit');
         if (!unitEl) return;
@@ -818,9 +814,7 @@ const Game = {
     },
 
     addHitAnimation(target) {
-        const board = document.getElementById('battle-board');
-        if (!board) return;
-        const cell = board.children[target.y * 10 + target.x];
+        const cell = document.querySelector(`#battle-board .cell[data-x="${target.x}"][data-y="${target.y}"]`);
         if (!cell) return;
         const unitEl = cell.querySelector('.unit');
         if (!unitEl) return;
@@ -829,9 +823,7 @@ const Game = {
     },
 
     addDeathAnimation(unit) {
-        const board = document.getElementById('battle-board');
-        if (!board) return;
-        const cell = board.children[unit.y * 10 + unit.x];
+        const cell = document.querySelector(`#battle-board .cell[data-x="${unit.x}"][data-y="${unit.y}"]`);
         if (!cell) return;
         const unitEl = cell.querySelector('.unit');
         if (!unitEl) return;
