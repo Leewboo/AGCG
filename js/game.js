@@ -3,6 +3,68 @@
 // 范围系统定义
 // ================================
 const Range = {
+    // 带阻断的十字范围：遇到任何单位停止延伸（用于移动）
+    plusBlocked(n, x, y, blockedSet) {
+        const result = [];
+        const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];
+        for (const dir of dirs) {
+            for (let i = 1; i <= n; i++) {
+                const px = x + dir.dx * i;
+                const py = y + dir.dy * i;
+                if (px < 0 || px >= BOARD_SIZE || py < 0 || py >= BOARD_SIZE) break;
+                result.push({ x: px, y: py });
+                if (blockedSet.has(`${px},${py}`)) break; // 被阻断
+            }
+        }
+        return result;
+    },
+    // 带阻断的斜角范围
+    xBlocked(n, x, y, blockedSet) {
+        const result = [];
+        const dirs = [{dx:1,dy:1},{dx:-1,dy:1},{dx:1,dy:-1},{dx:-1,dy:-1}];
+        for (const dir of dirs) {
+            for (let i = 1; i <= n; i++) {
+                const px = x + dir.dx * i;
+                const py = y + dir.dy * i;
+                if (px < 0 || px >= BOARD_SIZE || py < 0 || py >= BOARD_SIZE) break;
+                result.push({ x: px, y: py });
+                if (blockedSet.has(`${px},${py}`)) break;
+            }
+        }
+        return result;
+    },
+    // 带阻断的圆形/菱形范围（逐层BFS，被阻挡的格子不继续延伸）
+    rBlocked(n, x, y, blockedSet) {
+        const result = [];
+        const visited = new Set();
+        visited.add(`${x},${y}`);
+        let frontier = [{x, y, d:0}];
+        while (frontier.length > 0) {
+            const next = [];
+            for (const cur of frontier) {
+                if (cur.d >= n) continue;
+                const neighs = [
+                    {x: cur.x+1, y: cur.y}, {x: cur.x-1, y: cur.y},
+                    {x: cur.x, y: cur.y+1}, {x: cur.x, y: cur.y-1}
+                ];
+                for (const nb of neighs) {
+                    const key = `${nb.x},${nb.y}`;
+                    if (nb.x < 0 || nb.x >= BOARD_SIZE || nb.y < 0 || nb.y >= BOARD_SIZE) continue;
+                    if (visited.has(key)) continue;
+                    visited.add(key);
+                    result.push({ x: nb.x, y: nb.y });
+                    // 只有空格子才能继续延伸；被阻挡的格子算在范围内，但不继续扩散
+                    if (!blockedSet.has(key)) {
+                        next.push({x: nb.x, y: nb.y, d: cur.d + 1});
+                    }
+                }
+            }
+            frontier = next;
+        }
+        // 移除起点
+        return result.filter(p => !(p.x === x && p.y === y));
+    },
+    // 原始无阻断范围（保留给需要全范围的场景，如技能AOE）
     plus(n, x, y) {
         const result = [];
         for (let i = 1; i <= n; i++) {
@@ -35,6 +97,31 @@ const Range = {
         }
         return result.filter(p => p.x >= 0 && p.x < BOARD_SIZE && p.y >= 0 && p.y < BOARD_SIZE);
     },
+    // 阻断版解析：用于移动和攻击范围
+    parseBlocked(rangeInput, x, y, blockedSet) {
+        const ranges = Array.isArray(rangeInput) ? rangeInput : [rangeInput];
+        const result = [];
+        const seen = new Set();
+        for (const rangeStr of ranges) {
+            const match = String(rangeStr).match(/^([+xr])(\d+)$/);
+            if (!match) continue;
+            const type = match[1];
+            const n = parseInt(match[2]);
+            let pts = [];
+            if (type === '+') pts = this.plusBlocked(n, x, y, blockedSet);
+            else if (type === 'x') pts = this.xBlocked(n, x, y, blockedSet);
+            else if (type === 'r') pts = this.rBlocked(n, x, y, blockedSet);
+            for (const p of pts) {
+                const key = `${p.x},${p.y}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    result.push(p);
+                }
+            }
+        }
+        return result;
+    },
+    // 无阻断版解析：用于技能全范围
     parse(rangeInput, x, y) {
         const ranges = Array.isArray(rangeInput) ? rangeInput : [rangeInput];
         const result = [];
@@ -1026,8 +1113,14 @@ const Game = {
 
     showMoves(unit) {
         this.state.highlights = [];
+        // 构建所有存活单位的位置集合（用于范围阻断）
+        const blockedSet = new Set();
+        this.state.units.forEach(u => {
+            if (!u.dead) blockedSet.add(`${u.x},${u.y}`);
+        });
         if (!unit.moved) {
-            const moveRange = Range.parse(unit.moveRange || '+' + unit.mov, unit.x, unit.y);
+            // 移动范围：被任何单位阻断，且目标格必须为空
+            const moveRange = Range.parseBlocked(unit.moveRange || '+' + unit.mov, unit.x, unit.y, blockedSet);
             moveRange.forEach(p => {
                 if (!this.getUnit(p.x, p.y)) {
                     this.state.highlights.push({ x: p.x, y: p.y, type: 'move' });
@@ -1035,7 +1128,8 @@ const Game = {
             });
         }
         if (!unit.attacked) {
-            const attackRange = Range.parse(unit.attackRange || '+1', unit.x, unit.y);
+            // 攻击范围：被任何单位阻断（视线阻断），但阻挡格本身如果是敌人仍可攻击
+            const attackRange = Range.parseBlocked(unit.attackRange || '+1', unit.x, unit.y, blockedSet);
             attackRange.forEach(p => {
                 const target = this.getUnit(p.x, p.y);
                 if (target && target.player !== unit.player) {
