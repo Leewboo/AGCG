@@ -170,40 +170,6 @@ const Effect = {
         }
         return { damage: total, type: 'multishot', hits: details.length, details };
     },
-    // 距离伤害：距离越远，伤害越高
-    distanceDamage(attacker, target, baseDamage) {
-        const dist = Math.abs(target.x - attacker.x) + Math.abs(target.y - attacker.y);
-        const bonus = dist * 5; // 每格距离 +5 伤害
-        const total = baseDamage + bonus;
-        return this.damage(attacker, target, total);
-    },
-    // 劫营：移动到目标点，直线上的敌人都受伤
-    jieying(attacker, targetX, targetY, damage, gameState) {
-        const dx = Math.sign(targetX - attacker.x);
-        const dy = Math.sign(targetY - attacker.y);
-        const targets = [];
-        
-        // 计算直线上的位置
-        for (let i = 1; i <= Math.max(Math.abs(targetX - attacker.x), Math.abs(targetY - attacker.y)); i++) {
-            const checkX = attacker.x + dx * i;
-            const checkY = attacker.y + dy * i;
-            const hit = gameState.units.find(u => u.x === checkX && u.y === checkY && !u.dead && u.player !== attacker.player);
-            if (hit) targets.push(hit);
-        }
-        
-        // 移动
-        attacker.x = targetX;
-        attacker.y = targetY;
-        
-        // 造成伤害
-        const details = [];
-        targets.forEach(enemy => {
-            const r = this.damage(attacker, enemy, damage);
-            details.push({ name: enemy.name, ...r });
-        });
-        
-        return { type: 'jieying', targets: details };
-    },
     // 立即获得一次额外行动机会（移动+攻击）
     grantExtraAction(target) {
         target.moved = false;
