@@ -29,10 +29,10 @@ export const SUMMONS = {
     wall: { name: '盾墙', hp: 80, atk: 0, def: 20, mov: 0 }
 };
 
-// 能量获取条件
-export const ENERGY_ON_KILL = 1;
-export const ENERGY_ON_HURT = 1;
-export const ENERGY_ON_TURN = 1;
+// 能量获取条件（已废弃，改为技能级充能机制 chargeTrigger）
+export const ENERGY_ON_KILL = 0;
+export const ENERGY_ON_HURT = 0;
+export const ENERGY_ON_TURN = 0;
 export const ENERGY_ON_ATTACK = 0;
 
 // 武将数据

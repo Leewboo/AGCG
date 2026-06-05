@@ -2,8 +2,7 @@ import { Range as RangeLib } from './range.js';
 import { Effect } from './effect.js';
 import {
     BOARD_SIZE, TERRAIN, TERRAIN_NAMES, TERRAIN_LABELS,
-    SUMMONS, GENERALS,
-    ENERGY_ON_KILL, ENERGY_ON_HURT, ENERGY_ON_TURN
+    SUMMONS, GENERALS
 } from './data.js';
 
 // ================================
@@ -614,8 +613,6 @@ const Game = {
                 this.state.logs.push(`${attacker.name} 胆勇击杀 ${target.name}`);
                 this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
                 this.addDeathAnimation(target);
-                attacker.energy += ENERGY_ON_KILL;
-                this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_KILL}能量`, 'heal');
                 if (attacker._passive_changSheng && target.generalId) {
                     extraActionGranted = true;
                 }
@@ -667,8 +664,6 @@ const Game = {
                 if (unit.dead) {
                     this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
                     this.addDeathAnimation(unit);
-                    attacker.energy += ENERGY_ON_KILL;
-                    this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_KILL}能量`, 'heal');
                     // 常胜被动
                     if (attacker._passive_changSheng && unit.generalId) {
                         extraActionGranted = true;
@@ -677,18 +672,10 @@ const Game = {
                     this.state.logs.push(`${attacker.name} 攻击 ${unit.name} -${result.damage}`);
                 }
             }
-            if (!unit.dead && ENERGY_ON_HURT > 0) {
-                unit.energy += ENERGY_ON_HURT;
-                this.showFloatingText(unit.x, unit.y, `+${ENERGY_ON_HURT}能量`, 'heal');
-            }
             if (result.counter) {
                 this.state.logs.push(`${unit.name} 反击 -${result.counter}`);
                 this.showFloatingText(attacker.x, attacker.y, `反击-${result.counter}`, 'counter');
                 this.addHitAnimation(attacker);
-                if (!attacker.dead && ENERGY_ON_HURT > 0) {
-                    attacker.energy += ENERGY_ON_HURT;
-                    this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_HURT}能量`, 'heal');
-                }
             }
             if (extraActionGranted) {
                 Effect.grantExtraAction(attacker);
@@ -776,8 +763,6 @@ const Game = {
                         this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
                         this.addDeathAnimation(unit);
-                        attacker.energy += ENERGY_ON_KILL;
-                        this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_KILL}能量`, 'heal');
                         if (attacker._passive_changSheng && unit.generalId) {
                             extraActionGranted = true;
                         }
@@ -821,8 +806,6 @@ const Game = {
                         this.state.logs.push(`${attacker.name} 水淹击杀 ${unit.name}${riverText}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
                         this.addDeathAnimation(unit);
-                        attacker.energy += ENERGY_ON_KILL;
-                        this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_KILL}能量`, 'heal');
                     } else {
                         this.state.logs.push(`${attacker.name} 水淹 ${unit.name} -${result.damage}${riverText}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
@@ -944,13 +927,8 @@ const Game = {
         this.state.units.forEach(u => {
             u.moved = false; u.attacked = false; u.usedSkill = false;
             if (!u.dead) {
-                // 优先检查技能级 onTurn 充能，没有则使用全局 ENERGY_ON_TURN
-                const hasOnTurnSkill = (u.skills || []).some(s => s.chargeTrigger === 'onTurn');
-                if (hasOnTurnSkill) {
-                    this.triggerSkillCharge(u, 'onTurn');
-                } else if (ENERGY_ON_TURN > 0) {
-                    u.energy += ENERGY_ON_TURN;
-                }
+                // 技能级 onTurn 充能
+                this.triggerSkillCharge(u, 'onTurn');
             }
             if (u.buffs) {
                 const newBuffs = [];
@@ -1088,8 +1066,8 @@ const Game = {
         setTimeout(() => {
             this.state.units.forEach(u => {
                 u.moved = false; u.attacked = false; u.usedSkill = false;
-                if (!u.dead && ENERGY_ON_TURN > 0) {
-                    u.energy += ENERGY_ON_TURN;
+                if (!u.dead) {
+                    this.triggerSkillCharge(u, 'onTurn');
                 }
             });
             this.state.turn++;
