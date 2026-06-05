@@ -2,6 +2,7 @@ import { Range as RangeLib } from './range.js';
 import { Effect } from './effect.js';
 import {
     BOARD_SIZE, TERRAIN, TERRAIN_NAMES, TERRAIN_LABELS,
+    BLOCKING_TERRAIN_MOVE, BLOCKING_TERRAIN_ATTACK,
     SUMMONS, GENERALS
 } from './data.js';
 
@@ -640,7 +641,7 @@ const Game = {
             }
 
             // 验证落点是否在目标周围范围内且为空
-            const landingRange = RangeLib.parse(skill.step2Range || 'r2', target.x, target.y);
+            const landingRange = RangeLib.parse(skill.step2Range || 'r2', target.x, target.y, null, TERRAIN);
             const valid = landingRange.find(p => p.x === x && p.y === y);
             if (!valid || this.getUnit(x, y)) {
                 this.state.logs.push('无效的落点');
@@ -750,7 +751,7 @@ const Game = {
                     this.state.skillPhase = 'step2';
                     this.state.highlights = [];
                     // 显示目标周围的可选落点
-                    const landingRange = RangeLib.parse(skill.step2Range || 'r2', unit.x, unit.y);
+                    const landingRange = RangeLib.parse(skill.step2Range || 'r2', unit.x, unit.y, null, TERRAIN);
                     landingRange.forEach(p => {
                         if (!this.getUnit(p.x, p.y)) {
                             this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
@@ -900,7 +901,7 @@ const Game = {
         // 多步技能：第一步选择目标敌人
         if (skill.step1 === 'selectEnemy') {
             this.state.skillPhase = 'step1';
-            const range = RangeLib.parse(skill.step1Range || skill.range, u.x, u.y);
+            const range = RangeLib.parse(skill.step1Range || skill.range, u.x, u.y, BLOCKING_TERRAIN_ATTACK, TERRAIN);
             range.forEach(p => {
                 const target = this.getUnit(p.x, p.y);
                 if (target && target.player !== u.player) {
@@ -914,7 +915,7 @@ const Game = {
 
         // 普通单步技能
         this.state.skillPhase = null;
-        const range = RangeLib.parse(skill.range, u.x, u.y);
+        const range = RangeLib.parse(skill.range, u.x, u.y, BLOCKING_TERRAIN_ATTACK, TERRAIN);
         if (skill.category === 'summon') {
             range.forEach(p => {
                 if (!this.getUnit(p.x, p.y)) this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
@@ -944,7 +945,7 @@ const Game = {
             if (!u.dead) blockedSet.add(`${u.x},${u.y}`);
         });
         if (!unit.moved) {
-            const moveRange = RangeLib.parseBlocked(unit.moveRange || '+' + unit.mov, unit.x, unit.y, blockedSet);
+            const moveRange = RangeLib.parseBlocked(unit.moveRange || '+' + unit.mov, unit.x, unit.y, blockedSet, BLOCKING_TERRAIN_MOVE, TERRAIN);
             moveRange.forEach(p => {
                 if (!this.getUnit(p.x, p.y)) {
                     this.state.highlights.push({ x: p.x, y: p.y, type: 'move' });
@@ -952,7 +953,7 @@ const Game = {
             });
         }
         if (!unit.attacked) {
-            const attackRange = RangeLib.parseBlocked(unit.attackRange || '+1', unit.x, unit.y, blockedSet);
+            const attackRange = RangeLib.parseBlocked(unit.attackRange || '+1', unit.x, unit.y, blockedSet, BLOCKING_TERRAIN_ATTACK, TERRAIN);
             attackRange.forEach(p => {
                 const target = this.getUnit(p.x, p.y);
                 if (target && target.player !== unit.player) {
@@ -1036,8 +1037,8 @@ const Game = {
         // 关羽【威临】光环扫描：+2范围减攻，+1范围沉默
         this.state.units.forEach(u => {
             if (u._passive_weiLin && !u.dead) {
-                const auraRange2 = RangeLib.parse('+2', u.x, u.y);
-                const auraRange1 = RangeLib.parse('+1', u.x, u.y);
+                const auraRange2 = RangeLib.parse('+2', u.x, u.y, BLOCKING_TERRAIN_ATTACK, TERRAIN);
+                const auraRange1 = RangeLib.parse('+1', u.x, u.y, BLOCKING_TERRAIN_ATTACK, TERRAIN);
                 this.state.units.forEach(enemy => {
                     if (enemy.dead || enemy.player === u.player) return;
                     // +2范围减攻10

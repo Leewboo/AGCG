@@ -5,23 +5,29 @@ import { Effect } from './effect.js';
 
 export const BOARD_SIZE = 12;
 
+// 地形类型: 0=草地 1=山脉(阻断移动/攻击) 2=河流(阻断移动,可攻击) 3=城池 4=沼泽
 export const TERRAIN = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0],
-    [2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 2],
-    [2, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 2],
-    [0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0],
-    [2, 0, 4, 0, 0, 0, 0, 0, 0, 4, 0, 2],
-    [2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 2],
-    [0, 0, 3, 0, 0, 0, 0, 0, 0, 3, 0, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0],
+    [0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0],
+    [0, 3, 0, 0, 0, 2, 2, 0, 0, 0, 3, 0],
+    [1, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 1],
+    [0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0, 0],
+    [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+    [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
+    [0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0, 0],
+    [1, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 1],
+    [0, 3, 0, 0, 0, 2, 2, 0, 0, 0, 3, 0],
+    [0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0],
+    [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0]
 ];
 
 export const TERRAIN_NAMES = { 0: 'grass', 1: 'mountain', 2: 'river', 3: 'city', 4: 'swamp' };
 export const TERRAIN_LABELS = { 0: '', 1: '山', 2: '～', 3: '城', 4: '沼' };
+
+// 地形阻断规则: 哪些地形ID会阻断移动/攻击范围
+export const BLOCKING_TERRAIN_MOVE = new Set([1]); // 山脉阻断移动
+export const BLOCKING_TERRAIN_ATTACK = new Set([1]); // 山脉阻断攻击
+export const BLOCKING_TERRAIN_RIVER = new Set([2]); // 河流仅阻断移动(可攻击)
 
 export const SUMMONS = {
     soldier: { name: '士兵', hp: 40, atk: 8, def: 5, mov: 2 },
@@ -112,7 +118,7 @@ export const GENERALS = [
                 energyCost: 2,
                 chargeTrigger: 'afterAction',
                 content(a, t, gs) {
-                    const isRiver = TERRAIN[t.y][t.x] === 2;
+                    const isRiver = TERRAIN[t.y] && TERRAIN[t.y][t.x] === 2;
                     const dmg = isRiver ? 60 : 30;
                     const dmgResult = Effect.damage(a, t, dmg);
                     const slowResult = Effect.slow(a, t, 1, 2);

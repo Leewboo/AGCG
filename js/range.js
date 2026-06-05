@@ -3,8 +3,15 @@
 // ================================
 export const BOARD_SIZE = 12;
 
+// 地形阻断辅助: 检查某坐标是否被指定地形集合阻断
+function isTerrainBlocked(x, y, terrainSet, terrainMap) {
+    if (!terrainSet || !terrainMap) return false;
+    const tid = terrainMap[y] && terrainMap[y][x];
+    return terrainSet.has(tid);
+}
+
 export const Range = {
-    plusBlocked(n, x, y, blockedSet) {
+    plusBlocked(n, x, y, blockedSet, terrainBlockSet, terrainMap) {
         const result = [];
         const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];
         for (const dir of dirs) {
@@ -14,11 +21,12 @@ export const Range = {
                 if (px < 0 || px >= BOARD_SIZE || py < 0 || py >= BOARD_SIZE) break;
                 result.push({ x: px, y: py });
                 if (blockedSet.has(`${px},${py}`)) break;
+                if (isTerrainBlocked(px, py, terrainBlockSet, terrainMap)) break;
             }
         }
         return result;
     },
-    xBlocked(n, x, y, blockedSet) {
+    xBlocked(n, x, y, blockedSet, terrainBlockSet, terrainMap) {
         const result = [];
         const dirs = [{dx:1,dy:1},{dx:-1,dy:1},{dx:1,dy:-1},{dx:-1,dy:-1}];
         for (const dir of dirs) {
@@ -28,11 +36,12 @@ export const Range = {
                 if (px < 0 || px >= BOARD_SIZE || py < 0 || py >= BOARD_SIZE) break;
                 result.push({ x: px, y: py });
                 if (blockedSet.has(`${px},${py}`)) break;
+                if (isTerrainBlocked(px, py, terrainBlockSet, terrainMap)) break;
             }
         }
         return result;
     },
-    rBlocked(n, x, y, blockedSet) {
+    rBlocked(n, x, y, blockedSet, terrainBlockSet, terrainMap) {
         const result = [];
         const visited = new Set();
         visited.add(`${x},${y}`);
@@ -51,16 +60,16 @@ export const Range = {
                     if (visited.has(key)) continue;
                     visited.add(key);
                     result.push({ x: nb.x, y: nb.y });
-                    if (!blockedSet.has(key)) {
-                        next.push({x: nb.x, y: nb.y, d: cur.d + 1});
-                    }
+                    if (blockedSet.has(key)) continue;
+                    if (isTerrainBlocked(nb.x, nb.y, terrainBlockSet, terrainMap)) continue;
+                    next.push({x: nb.x, y: nb.y, d: cur.d + 1});
                 }
             }
             frontier = next;
         }
         return result.filter(p => !(p.x === x && p.y === y));
     },
-    plus(n, x, y) {
+    plus(n, x, y, terrainBlockSet, terrainMap) {
         const result = [];
         for (let i = 1; i <= n; i++) {
             result.push({ x: x + i, y });
@@ -68,9 +77,12 @@ export const Range = {
             result.push({ x, y: y + i });
             result.push({ x, y: y - i });
         }
-        return result.filter(p => p.x >= 0 && p.x < BOARD_SIZE && p.y >= 0 && p.y < BOARD_SIZE);
+        return result.filter(p => {
+            if (p.x < 0 || p.x >= BOARD_SIZE || p.y < 0 || p.y >= BOARD_SIZE) return false;
+            return !isTerrainBlocked(p.x, p.y, terrainBlockSet, terrainMap);
+        });
     },
-    x(n, x, y) {
+    x(n, x, y, terrainBlockSet, terrainMap) {
         const result = [];
         for (let i = 1; i <= n; i++) {
             result.push({ x: x + i, y: y + i });
@@ -78,9 +90,12 @@ export const Range = {
             result.push({ x: x + i, y: y - i });
             result.push({ x: x - i, y: y - i });
         }
-        return result.filter(p => p.x >= 0 && p.x < BOARD_SIZE && p.y >= 0 && p.y < BOARD_SIZE);
+        return result.filter(p => {
+            if (p.x < 0 || p.x >= BOARD_SIZE || p.y < 0 || p.y >= BOARD_SIZE) return false;
+            return !isTerrainBlocked(p.x, p.y, terrainBlockSet, terrainMap);
+        });
     },
-    r(n, x, y) {
+    r(n, x, y, terrainBlockSet, terrainMap) {
         const result = [];
         for (let dy = -n; dy <= n; dy++) {
             for (let dx = -n; dx <= n; dx++) {
@@ -90,9 +105,12 @@ export const Range = {
                 }
             }
         }
-        return result.filter(p => p.x >= 0 && p.x < BOARD_SIZE && p.y >= 0 && p.y < BOARD_SIZE);
+        return result.filter(p => {
+            if (p.x < 0 || p.x >= BOARD_SIZE || p.y < 0 || p.y >= BOARD_SIZE) return false;
+            return !isTerrainBlocked(p.x, p.y, terrainBlockSet, terrainMap);
+        });
     },
-    parseBlocked(rangeInput, x, y, blockedSet) {
+    parseBlocked(rangeInput, x, y, blockedSet, terrainBlockSet, terrainMap) {
         const ranges = Array.isArray(rangeInput) ? rangeInput : [rangeInput];
         const result = [];
         const seen = new Set();
@@ -102,9 +120,9 @@ export const Range = {
             const type = match[1];
             const n = parseInt(match[2]);
             let pts = [];
-            if (type === '+') pts = this.plusBlocked(n, x, y, blockedSet);
-            else if (type === 'x') pts = this.xBlocked(n, x, y, blockedSet);
-            else if (type === 'r') pts = this.rBlocked(n, x, y, blockedSet);
+            if (type === '+') pts = this.plusBlocked(n, x, y, blockedSet, terrainBlockSet, terrainMap);
+            else if (type === 'x') pts = this.xBlocked(n, x, y, blockedSet, terrainBlockSet, terrainMap);
+            else if (type === 'r') pts = this.rBlocked(n, x, y, blockedSet, terrainBlockSet, terrainMap);
             for (const p of pts) {
                 const key = `${p.x},${p.y}`;
                 if (!seen.has(key)) {
@@ -115,7 +133,7 @@ export const Range = {
         }
         return result;
     },
-    parse(rangeInput, x, y) {
+    parse(rangeInput, x, y, terrainBlockSet, terrainMap) {
         const ranges = Array.isArray(rangeInput) ? rangeInput : [rangeInput];
         const result = [];
         const seen = new Set();
@@ -125,9 +143,9 @@ export const Range = {
             const type = match[1];
             const n = parseInt(match[2]);
             let pts = [];
-            if (type === '+') pts = this.plus(n, x, y);
-            else if (type === 'x') pts = this.x(n, x, y);
-            else if (type === 'r') pts = this.r(n, x, y);
+            if (type === '+') pts = this.plus(n, x, y, terrainBlockSet, terrainMap);
+            else if (type === 'x') pts = this.x(n, x, y, terrainBlockSet, terrainMap);
+            else if (type === 'r') pts = this.r(n, x, y, terrainBlockSet, terrainMap);
             for (const p of pts) {
                 const key = `${p.x},${p.y}`;
                 if (!seen.has(key)) {
