@@ -504,6 +504,15 @@ html, body {
     align-items: center;
     justify-content: center;
     position: relative;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: pan-x pan-y;
+}
+
+.board-wrapper:active,
+.board-wrapper.dragging {
+    cursor: grabbing;
 }
 
 .board {
@@ -523,28 +532,36 @@ html, body {
 
 /* ---- 缩略图 ---- */
 .mini-map {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
     display: grid;
-    grid-template-columns: repeat(12, 24px);
-    grid-template-rows: repeat(12, 24px);
+    grid-template-columns: repeat(12, 12px);
+    grid-template-rows: repeat(12, 12px);
     gap: 1px;
     background: var(--border-light);
     border: var(--border-width) solid var(--border-medium);
     padding: 1px;
-    flex-shrink: 0;
-}
-
-.mini-map.hidden {
-    display: none;
+    z-index: 50;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
 }
 
 .mini-cell {
-    width: 24px;
-    height: 24px;
+    width: 12px;
+    height: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    cursor: default;
+    cursor: pointer;
+    transition: filter 0.1s ease;
+}
+
+.mini-cell:hover {
+    filter: brightness(0.85);
 }
 
 .mini-cell.grass { background: var(--terrain-grass); }
@@ -553,14 +570,20 @@ html, body {
 .mini-cell.city { background: var(--terrain-city); }
 .mini-cell.swamp { background: var(--terrain-swamp); }
 
+.mini-cell.selected {
+    outline: 2px solid var(--border-dark);
+    outline-offset: -1px;
+    z-index: 2;
+}
+
 .mini-unit {
-    width: 16px;
-    height: 16px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 8px;
+    font-size: 6px;
     font-weight: 700;
     color: #fff;
 }
@@ -568,6 +591,16 @@ html, body {
 .mini-unit.p1 { background: var(--p1-primary); }
 .mini-unit.p2 { background: var(--p2-primary); }
 .mini-unit.dead { opacity: 0.2; }
+
+/* 视野指示器 - 缩略图上显示当前大棋盘可见区域 */
+.mini-viewport {
+    position: absolute;
+    border: 2px solid var(--border-dark);
+    background: rgba(0,0,0,0.08);
+    pointer-events: none;
+    z-index: 10;
+    transition: all 0.15s ease-out;
+}
 
 .cell {
     width: var(--cell-w);

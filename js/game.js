@@ -30,6 +30,7 @@ const Game = {
         // 把 Range 挂载到 gameState 供 Effect 使用
         this.state._modules = { Range: RangeLib };
         this.bindEvents();
+        this.bindDragScroll();
         this.showScreen('menu');
     },
 
@@ -72,6 +73,88 @@ const Game = {
                 document.documentElement.style.setProperty('--cell-h', val + 'px');
             };
         }
+    },
+
+    // ================================
+    // 拖拽滚动
+    // ================================
+    bindDragScroll() {
+        const wrapper = document.getElementById('board-wrapper');
+        if (!wrapper) return;
+
+        let isDown = false;
+        let startX, startY, scrollLeft, scrollTop;
+        let moved = false;
+
+        const onDown = (e) => {
+            // 仅左键或单指触摸
+            if (e.type === 'mousedown' && e.button !== 0) return;
+            isDown = true;
+            moved = false;
+            wrapper.classList.add('dragging');
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            startX = clientX;
+            startY = clientY;
+            scrollLeft = wrapper.scrollLeft;
+            scrollTop = wrapper.scrollTop;
+        };
+
+        const onMove = (e) => {
+            if (!isDown) return;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const dx = clientX - startX;
+            const dy = clientY - startY;
+            if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
+            wrapper.scrollLeft = scrollLeft - dx;
+            wrapper.scrollTop = scrollTop - dy;
+            this.updateMiniViewport();
+        };
+
+        const onUp = () => {
+            isDown = false;
+            // 延迟移除 dragging 类，确保 click 事件能检测到拖拽状态
+            setTimeout(() => wrapper.classList.remove('dragging'), 50);
+        };
+
+        wrapper.addEventListener('mousedown', onDown);
+        wrapper.addEventListener('mousemove', onMove);
+        wrapper.addEventListener('mouseup', onUp);
+        wrapper.addEventListener('mouseleave', onUp);
+
+        wrapper.addEventListener('touchstart', onDown, { passive: true });
+        wrapper.addEventListener('touchmove', onMove, { passive: true });
+        wrapper.addEventListener('touchend', onUp);
+
+        // 滚轮/手势滚动也更新视野框
+        wrapper.addEventListener('scroll', () => this.updateMiniViewport(), { passive: true });
+    },
+
+    updateMiniViewport() {
+        const wrapper = document.getElementById('board-wrapper');
+        const board = document.getElementById('battle-board');
+        const miniMap = document.getElementById('mini-map');
+        const indicator = document.getElementById('mini-viewport-indicator');
+        if (!wrapper || !board || !miniMap || !indicator) return;
+
+        const cellW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-w')) || 52;
+        const cellH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-h')) || 52;
+        const gap = 1;
+        const miniCell = 12;
+        const miniGap = 1;
+        const scaleX = (miniCell + miniGap) / (cellW + gap);
+        const scaleY = (miniCell + miniGap) / (cellH + gap);
+
+        const x = wrapper.scrollLeft * scaleX;
+        const y = wrapper.scrollTop * scaleY;
+        const w = wrapper.clientWidth * scaleX;
+        const h = wrapper.clientHeight * scaleY;
+
+        indicator.style.left = x + 'px';
+        indicator.style.top = y + 'px';
+        indicator.style.width = w + 'px';
+        indicator.style.height = h + 'px';
     },
 
     startSelect() {
@@ -340,80 +423,103 @@ const Game = {
         const board = document.getElementById('battle-board');
         const miniMap = document.getElementById('mini-map');
         const log = document.getElementById('log-panel');
-        const sizeControls = document.querySelector('.board-size-controls');
 
         if (info) info.textContent = `第${this.state.turn}回合 ${this.state.currentPlayer === 1 ? '红方' : '蓝方'}`;
 
-        // PVE模式下，AI回合显示缩略图，玩家回合显示大棋盘
-        const isPveAiTurn = this.state.mode === 'pve' && this.state.currentPlayer === 2;
-
+        // 大棋盘始终渲染
         if (board) {
-            if (isPveAiTurn) {
-                board.classList.add('hidden');
-            } else {
-                board.classList.remove('hidden');
-                board.innerHTML = '';
-                for (let y = 0; y < BOARD_SIZE; y++) {
-                    for (let x = 0; x < BOARD_SIZE; x++) {
-                        const terrainId = TERRAIN[y][x];
-                        const terrain = TERRAIN_NAMES[terrainId];
-                        const terrainLabel = TERRAIN_LABELS[terrainId];
-                        const unit = this.getUnit(x, y);
-                        const hl = this.state.highlights.find(h => h.x === x && h.y === y);
+            board.innerHTML = '';
+            for (let y = 0; y < BOARD_SIZE; y++) {
+                for (let x = 0; x < BOARD_SIZE; x++) {
+                    const terrainId = TERRAIN[y][x];
+                    const terrain = TERRAIN_NAMES[terrainId];
+                    const terrainLabel = TERRAIN_LABELS[terrainId];
+                    const unit = this.getUnit(x, y);
+                    const hl = this.state.highlights.find(h => h.x === x && h.y === y);
 
-                        let cellClass = `cell ${terrain}`;
-                        if (hl) cellClass += ` highlight-${hl.type}`;
+                    let cellClass = `cell ${terrain}`;
+                    if (hl) cellClass += ` highlight-${hl.type}`;
 
-                        const cell = document.createElement('div');
-                        cell.className = cellClass;
-                        cell.dataset.x = x;
-                        cell.dataset.y = y;
+                    const cell = document.createElement('div');
+                    cell.className = cellClass;
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
 
-                        let cellHtml = '';
-                        if (x === 0) cellHtml += `<span class="cell-label top-left">${y}</span>`;
-                        if (y === BOARD_SIZE - 1) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
-                        if (terrainLabel) cellHtml += `<span class="terrain-label" style="font-size:24px;opacity:0.7">${terrainLabel}</span>`;
-                        if (unit) cellHtml += this.renderUnit(unit);
-                        cell.innerHTML = cellHtml;
+                    let cellHtml = '';
+                    if (x === 0) cellHtml += `<span class="cell-label top-left">${y}</span>`;
+                    if (y === BOARD_SIZE - 1) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
+                    if (terrainLabel) cellHtml += `<span class="terrain-label" style="font-size:24px;opacity:0.7">${terrainLabel}</span>`;
+                    if (unit) cellHtml += this.renderUnit(unit);
+                    cell.innerHTML = cellHtml;
 
-                        cell.onclick = () => this.handleBattleClick(x, y);
-                        board.appendChild(cell);
-                    }
+                    cell.onclick = () => this.handleBattleClick(x, y);
+                    board.appendChild(cell);
                 }
             }
         }
 
+        // 缩略图始终渲染（悬浮小窗口）
         if (miniMap) {
-            if (isPveAiTurn) {
-                miniMap.classList.remove('hidden');
-                miniMap.innerHTML = '';
-                for (let y = 0; y < BOARD_SIZE; y++) {
-                    for (let x = 0; x < BOARD_SIZE; x++) {
-                        const terrainId = TERRAIN[y][x];
-                        const terrain = TERRAIN_NAMES[terrainId];
-                        const unit = this.getUnit(x, y);
-                        const cell = document.createElement('div');
-                        cell.className = `mini-cell ${terrain}`;
-                        if (unit) {
-                            cell.innerHTML = `<div class="mini-unit p${unit.player} ${unit.dead ? 'dead' : ''}">${unit.name.charAt(0)}</div>`;
-                        }
-                        miniMap.appendChild(cell);
+            const fragment = document.createDocumentFragment();
+            const sel = this.state.selectedUnit;
+            for (let y = 0; y < BOARD_SIZE; y++) {
+                for (let x = 0; x < BOARD_SIZE; x++) {
+                    const terrainId = TERRAIN[y][x];
+                    const terrain = TERRAIN_NAMES[terrainId];
+                    const unit = this.getUnit(x, y);
+                    const cell = document.createElement('div');
+                    let cls = `mini-cell ${terrain}`;
+                    if (sel && sel.x === x && sel.y === y) cls += ' selected';
+                    cell.className = cls;
+                    if (unit) {
+                        cell.innerHTML = `<div class="mini-unit p${unit.player} ${unit.dead ? 'dead' : ''}">${unit.name.charAt(0)}</div>`;
                     }
+                    cell.onclick = () => this.scrollToCell(x, y);
+                    fragment.appendChild(cell);
                 }
-            } else {
-                miniMap.classList.add('hidden');
-                miniMap.innerHTML = '';
             }
-        }
-
-        if (sizeControls) {
-            sizeControls.style.display = isPveAiTurn ? 'none' : 'flex';
+            // 保留或创建视野指示器
+            let indicator = document.getElementById('mini-viewport-indicator');
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'mini-viewport-indicator';
+                indicator.className = 'mini-viewport';
+            }
+            fragment.appendChild(indicator);
+            miniMap.innerHTML = '';
+            miniMap.appendChild(fragment);
+            this.updateMiniViewport();
         }
 
         this.renderPlayerBars();
         this.renderSelectedSkills();
 
         if (log) log.innerHTML = this.state.logs.slice(-8).map(l => `<div class="log-entry">${l}</div>`).join('');
+    },
+
+    scrollToCell(x, y) {
+        const wrapper = document.getElementById('board-wrapper');
+        if (!wrapper) return;
+        // 使用 requestAnimationFrame 确保 DOM 尺寸已更新
+        requestAnimationFrame(() => {
+            const cellW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-w')) || 52;
+            const cellH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-h')) || 52;
+            const targetX = x * (cellW + 1);
+            const targetY = y * (cellH + 1);
+            wrapper.scrollTo({
+                left: Math.max(0, targetX - wrapper.clientWidth / 2 + cellW / 2),
+                top: Math.max(0, targetY - wrapper.clientHeight / 2 + cellH / 2),
+                behavior: 'smooth'
+            });
+            // 滚动动画期间持续更新视野框
+            let rafId;
+            const tick = () => {
+                this.updateMiniViewport();
+                rafId = requestAnimationFrame(tick);
+            };
+            rafId = requestAnimationFrame(tick);
+            setTimeout(() => cancelAnimationFrame(rafId), 350);
+        });
     },
 
     renderSelectedSkills() {
@@ -660,6 +766,10 @@ const Game = {
     // 战斗点击处理
     // ================================
     handleBattleClick(x, y) {
+        // 如果正在拖拽，忽略点击
+        const wrapper = document.getElementById('board-wrapper');
+        if (wrapper && wrapper.classList.contains('dragging')) return;
+
         const unit = this.getUnit(x, y);
         const hlMove = this.state.highlights.find(h => h.x === x && h.y === y && h.type === 'move');
         const hlAttack = this.state.highlights.find(h => h.x === x && h.y === y && h.type === 'attack');
