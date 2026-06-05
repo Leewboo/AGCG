@@ -605,13 +605,23 @@ const Game = {
 
     showQuote(unit, type) {
         // 确保单位有 generalData 和 quotes
-        if (!unit || !unit.generalData || !unit.generalData.quotes) return;
+        if (!unit || !unit.generalData || !unit.generalData.quotes) {
+            console.log('[Quote] 缺少 unit/generalData/quotes:', {unit: !!unit, generalData: !!unit?.generalData, quotes: !!unit?.generalData?.quotes});
+            return;
+        }
         const quotes = unit.generalData.quotes;
-        if (!quotes[type] || quotes[type].length === 0) return;
+        if (!quotes[type] || quotes[type].length === 0) {
+            console.log('[Quote] 语录类型为空:', type, quotes[type]);
+            return;
+        }
         const list = quotes[type];
         const text = list[Math.floor(Math.random() * list.length)];
+        console.log('[Quote] 显示语录:', unit.name, type, text);
         const cell = document.querySelector(`#battle-board .cell[data-x="${unit.x}"][data-y="${unit.y}"]`);
-        if (!cell) return;
+        if (!cell) {
+            console.log('[Quote] 未找到 cell:', unit.x, unit.y);
+            return;
+        }
         // 避免重复显示多个语录
         const existing = cell.querySelector('.quote-bubble');
         if (existing) existing.remove();
