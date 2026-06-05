@@ -106,7 +106,7 @@ const Game = {
 
     renderSelect() {
         console.log('[Game] renderSelect called');
-        console.log('[Game] GENERALS length:', GENERALS.length);
+        console.log('[Game] GENERALS length:', window.GENERALS.length);
         const title = document.getElementById('select-title');
         const count = document.getElementById('select-count');
         const list = document.getElementById('generals-list');
@@ -118,7 +118,7 @@ const Game = {
         count.textContent = `${selected.length}/5`;
         confirm.disabled = selected.length < 5;
 
-        list.innerHTML = GENERALS.map(g => {
+        list.innerHTML = window.GENERALS.map(g => {
             const isSelected = selected.find(s => s.id === g.id);
             const isOpponentSelected = this.state.players[this.state.currentPlayer === 1 ? 2 : 1].generals.find(s => s.id === g.id);
             return `
@@ -139,7 +139,7 @@ const Game = {
                 const generals = this.state.players[this.state.currentPlayer].generals;
                 const idx = generals.findIndex(gg => gg.id === id);
                 if (idx >= 0) generals.splice(idx, 1);
-                else if (generals.length < 5) generals.push({ ...GENERALS.find(gg => gg.id === id) });
+                else if (generals.length < 5) generals.push({ ...window.GENERALS.find(gg => gg.id === id) });
                 this.renderSelect();
             };
         });
@@ -148,7 +148,7 @@ const Game = {
             btn.onclick = (e) => {
                 e.stopPropagation();
                 const id = e.currentTarget.dataset.id;
-                const g = GENERALS.find(gg => gg.id === id);
+                const g = window.GENERALS.find(gg => gg.id === id);
                 if (g) {
                     const moveRangeStr = Array.isArray(g.moveRange) ? g.moveRange.join(', ') : g.moveRange;
                     const attackRangeStr = Array.isArray(g.attackRange) ? g.attackRange.join(', ') : g.attackRange;
@@ -163,7 +163,7 @@ const Game = {
         if (this.state.currentPlayer === 1) {
             this.state.currentPlayer = 2;
             if (this.state.mode === 'pve') {
-                const available = GENERALS.filter(g => !this.state.players[1].generals.find(p => p.id === g.id));
+                const available = window.GENERALS.filter(g => !this.state.players[1].generals.find(p => p.id === g.id));
                 for (let i = 0; i < 5; i++) {
                     const idx = Math.floor(Math.random() * available.length);
                     this.state.players[2].generals.push({ ...available[idx] });
@@ -203,15 +203,15 @@ const Game = {
         count.textContent = `${deployed.length}/5`;
 
         board.innerHTML = '';
-        for (let y = 0; y < BOARD_SIZE; y++) {
-            for (let x = 0; x < BOARD_SIZE; x++) {
-                const terrainId = TERRAIN[y][x];
-                const terrain = TERRAIN_NAMES[terrainId];
-                const terrainLabel = TERRAIN_LABELS[terrainId];
+        for (let y = 0; y < window.BOARD_SIZE; y++) {
+            for (let x = 0; x < window.BOARD_SIZE; x++) {
+                const terrainId = window.TERRAIN[y][x];
+                const terrain = window.TERRAIN_NAMES[terrainId];
+                const terrainLabel = window.TERRAIN_LABELS[terrainId];
                 const unit = this.getUnit(x, y);
 
                 let cellClass = `cell ${terrain}`;
-                if (player === 1 && y >= BOARD_SIZE - 3) cellClass += ' deploy-zone-p1';
+                if (player === 1 && y >= window.BOARD_SIZE - 3) cellClass += ' deploy-zone-p1';
                 if (player === 2 && y <= 2) cellClass += ' deploy-zone-p2';
 
                 const cell = document.createElement('div');
@@ -311,7 +311,7 @@ const Game = {
     deployAI() {
         const available = [];
         for (let y = 0; y <= 2; y++) {
-            for (let x = 0; x < BOARD_SIZE; x++) {
+            for (let x = 0; x < window.BOARD_SIZE; x++) {
                 if (!this.getUnit(x, y)) available.push({ x, y });
             }
         }
@@ -369,11 +369,11 @@ const Game = {
 
         if (board) {
             board.innerHTML = '';
-            for (let y = 0; y < BOARD_SIZE; y++) {
-                for (let x = 0; x < BOARD_SIZE; x++) {
-                    const terrainId = TERRAIN[y][x];
-                    const terrain = TERRAIN_NAMES[terrainId];
-                    const terrainLabel = TERRAIN_LABELS[terrainId];
+            for (let y = 0; y < window.BOARD_SIZE; y++) {
+                for (let x = 0; x < window.BOARD_SIZE; x++) {
+                    const terrainId = window.TERRAIN[y][x];
+                    const terrain = window.TERRAIN_NAMES[terrainId];
+                    const terrainLabel = window.TERRAIN_LABELS[terrainId];
                     const unit = this.getUnit(x, y);
                     const hl = this.state.highlights.find(h => h.x === x && h.y === y);
 
@@ -603,25 +603,6 @@ const Game = {
         unitEl.classList.add('dying');
     },
 
-    showQuote(unit, type) {
-        const quotes = unit.generalData?.quotes;
-        if (!quotes || !quotes[type] || quotes[type].length === 0) return;
-        const list = quotes[type];
-        const text = list[Math.floor(Math.random() * list.length)];
-        const cell = document.querySelector(`#battle-board .cell[data-x="${unit.x}"][data-y="${unit.y}"]`);
-        if (!cell) return;
-        // 避免重复显示多个语录
-        const existing = cell.querySelector('.quote-bubble');
-        if (existing) existing.remove();
-        const bubble = document.createElement('div');
-        bubble.className = 'quote-bubble';
-        bubble.textContent = text;
-        cell.appendChild(bubble);
-        setTimeout(() => {
-            if (bubble.parentNode) bubble.remove();
-        }, 3000);
-    },
-
     renderUnit(unit) {
         const hpPercent = (unit.hp / unit.maxHp * 100).toFixed(0);
         const isSelected = this.state.selectedUnit && this.state.selectedUnit.id === unit.id;
@@ -684,7 +665,7 @@ const Game = {
             }
 
             // 验证落点是否在目标周围范围内且为空
-            const landingRange = RangeLib.parse(skill.step2Range || 'r2', target.x, target.y, null, TERRAIN);
+            const landingRange = window.Range.parse(skill.step2Range || 'r2', target.x, target.y, null, window.TERRAIN);
             const valid = landingRange.find(p => p.x === x && p.y === y);
             if (!valid || this.getUnit(x, y)) {
                 this.state.logs.push('无效的落点');
@@ -702,20 +683,16 @@ const Game = {
                 this.state.logs.push(`${attacker.name} 胆勇击杀 ${target.name}`);
                 this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
                 this.addDeathAnimation(target);
-                this.showQuote(attacker, 'kill');
-                this.showQuote(target, 'death');
                 if (attacker._passive_changSheng && target.generalId) {
                     extraActionGranted = true;
                 }
             } else {
                 this.state.logs.push(`${attacker.name} 胆勇 ${target.name} -${result.damage}`);
                 this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
-                this.showQuote(attacker, 'skill');
-                this.showQuote(target, 'hurt');
             }
 
             if (extraActionGranted) {
-                Effect.grantExtraAction(attacker);
+                window.Effect.grantExtraAction(attacker);
                 this.state.logs.push(`${attacker.name} 常胜！获得额外行动`);
                 this.showFloatingText(attacker.x, attacker.y, '常胜！', 'heal');
             } else {
@@ -735,7 +712,6 @@ const Game = {
             mover.moved = true;
             this.clearHighlights();
             this.state.logs.push(`${mover.name} 移动`);
-            this.showQuote(mover, 'move');
             // 技能级充能：afterMove / afterAction
             this.triggerSkillCharge(mover, 'afterMove');
             this.triggerSkillCharge(mover, 'afterAction');
@@ -746,39 +722,33 @@ const Game = {
         // 普通攻击
         if (hlAttack && this.state.selectedUnit && unit && unit.player !== this.state.selectedUnit.player) {
             const attacker = this.state.selectedUnit;
-            const result = Effect.damage(attacker, unit, attacker.atk);
+            const result = window.Effect.damage(attacker, unit, attacker.atk);
             this.addLungeAnimation(attacker, unit);
             let extraActionGranted = false;
             if (result.type === 'dodge') {
                 this.state.logs.push(`${unit.name} 闪避了攻击！`);
                 this.showFloatingText(unit.x, unit.y, '闪避', 'dodge');
-                this.showQuote(attacker, 'attack');
             } else {
                 this.addHitAnimation(unit);
                 this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
                 if (unit.dead) {
                     this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
                     this.addDeathAnimation(unit);
-                    this.showQuote(attacker, 'kill');
-                    this.showQuote(unit, 'death');
                     // 常胜被动
                     if (attacker._passive_changSheng && unit.generalId) {
                         extraActionGranted = true;
                     }
                 } else {
                     this.state.logs.push(`${attacker.name} 攻击 ${unit.name} -${result.damage}`);
-                    this.showQuote(attacker, 'attack');
-                    this.showQuote(unit, 'hurt');
                 }
             }
             if (result.counter) {
                 this.state.logs.push(`${unit.name} 反击 -${result.counter}`);
                 this.showFloatingText(attacker.x, attacker.y, `反击-${result.counter}`, 'counter');
                 this.addHitAnimation(attacker);
-                this.showQuote(unit, 'attack');
             }
             if (extraActionGranted) {
-                Effect.grantExtraAction(attacker);
+                window.Effect.grantExtraAction(attacker);
                 this.state.logs.push(`${attacker.name} 常胜！获得额外行动`);
                 this.showFloatingText(attacker.x, attacker.y, '常胜！', 'heal');
             } else {
@@ -805,7 +775,7 @@ const Game = {
                     this.state.skillPhase = 'step2';
                     this.state.highlights = [];
                     // 显示目标周围的可选落点
-                    const landingRange = RangeLib.parse(skill.step2Range || 'r2', unit.x, unit.y, null, TERRAIN);
+                    const landingRange = window.Range.parse(skill.step2Range || 'r2', unit.x, unit.y, null, TERRAIN);
                     landingRange.forEach(p => {
                         if (!this.getUnit(p.x, p.y)) {
                             this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
@@ -822,7 +792,7 @@ const Game = {
             if (skill.category === 'summon') {
                 if (!this.getUnit(x, y)) {
                     skill.content(attacker, { x, y }, this.state);
-                    this.state.logs.push(`${attacker.name} 召唤 ${SUMMONS[skill.summon].name}`);
+                    this.state.logs.push(`${attacker.name} 召唤 ${window.SUMMONS[skill.summon].name}`);
                 }
             } else if (unit && unit.player !== attacker.player) {
                 const result = skill.content(attacker, unit, this.state);
@@ -863,19 +833,15 @@ const Game = {
                         this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
                         this.addDeathAnimation(unit);
-                        this.showQuote(attacker, 'kill');
-                        this.showQuote(unit, 'death');
                         if (attacker._passive_changSheng && unit.generalId) {
                             extraActionGranted = true;
                         }
                     } else {
                         this.state.logs.push(`${attacker.name} ${skill.name} ${unit.name} -${result.damage}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
-                        this.showQuote(attacker, 'skill');
-                        this.showQuote(unit, 'hurt');
                     }
                     if (extraActionGranted) {
-                        Effect.grantExtraAction(attacker);
+                        window.Effect.grantExtraAction(attacker);
                         this.state.logs.push(`${attacker.name} 常胜！获得额外行动`);
                         this.showFloatingText(attacker.x, attacker.y, '常胜！', 'heal');
                     } else {
@@ -910,13 +876,9 @@ const Game = {
                         this.state.logs.push(`${attacker.name} 水淹击杀 ${unit.name}${riverText}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
                         this.addDeathAnimation(unit);
-                        this.showQuote(attacker, 'kill');
-                        this.showQuote(unit, 'death');
                     } else {
                         this.state.logs.push(`${attacker.name} 水淹 ${unit.name} -${result.damage}${riverText}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
-                        this.showQuote(attacker, 'skill');
-                        this.showQuote(unit, 'hurt');
                     }
                     if (result.slow) {
                         this.showFloatingText(unit.x, unit.y, '减速', 'damage');
@@ -924,10 +886,8 @@ const Game = {
                 } else if (result.heal) {
                     this.state.logs.push(`${attacker.name} ${skill.name} 治疗${result.heal}`);
                     this.showFloatingText(attacker.x, attacker.y, `+${result.heal}`, 'heal');
-                    this.showQuote(attacker, 'skill');
                 } else if (result.type === 'summon') {
                     this.state.logs.push(`${attacker.name} 召唤 ${result.unit.name}`);
-                    this.showQuote(attacker, 'skill');
                 }
             }
             attacker.usedSkill = true;
@@ -965,7 +925,7 @@ const Game = {
         // 多步技能：第一步选择目标敌人
         if (skill.step1 === 'selectEnemy') {
             this.state.skillPhase = 'step1';
-            const range = RangeLib.parse(skill.step1Range || skill.range, u.x, u.y, BLOCKING_TERRAIN_ATTACK, TERRAIN);
+            const range = window.Range.parse(skill.step1Range || skill.range, u.x, u.y, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
             range.forEach(p => {
                 const target = this.getUnit(p.x, p.y);
                 if (target && target.player !== u.player) {
@@ -979,7 +939,7 @@ const Game = {
 
         // 普通单步技能
         this.state.skillPhase = null;
-        const range = RangeLib.parse(skill.range, u.x, u.y, BLOCKING_TERRAIN_ATTACK, TERRAIN);
+        const range = window.Range.parse(skill.range, u.x, u.y, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
         if (skill.category === 'summon') {
             range.forEach(p => {
                 if (!this.getUnit(p.x, p.y)) this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
@@ -1009,7 +969,7 @@ const Game = {
             if (!u.dead) blockedSet.add(`${u.x},${u.y}`);
         });
         if (!unit.moved) {
-            const moveRange = RangeLib.parseBlocked(unit.moveRange || '+' + unit.mov, unit.x, unit.y, blockedSet, BLOCKING_TERRAIN_MOVE, TERRAIN);
+            const moveRange = window.Range.parseBlocked(unit.moveRange || '+' + unit.mov, unit.x, unit.y, blockedSet, window.BLOCKING_TERRAIN_MOVE, window.TERRAIN);
             moveRange.forEach(p => {
                 if (!this.getUnit(p.x, p.y)) {
                     this.state.highlights.push({ x: p.x, y: p.y, type: 'move' });
@@ -1017,7 +977,7 @@ const Game = {
             });
         }
         if (!unit.attacked) {
-            const attackRange = RangeLib.parseBlocked(unit.attackRange || '+1', unit.x, unit.y, blockedSet, BLOCKING_TERRAIN_ATTACK, TERRAIN);
+            const attackRange = window.Range.parseBlocked(unit.attackRange || '+1', unit.x, unit.y, blockedSet, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
             attackRange.forEach(p => {
                 const target = this.getUnit(p.x, p.y);
                 if (target && target.player !== unit.player) {
@@ -1101,8 +1061,8 @@ const Game = {
         // 关羽【威临】光环扫描：+2范围减攻，+1范围沉默
         this.state.units.forEach(u => {
             if (u._passive_weiLin && !u.dead) {
-                const auraRange2 = RangeLib.parse('+2', u.x, u.y, BLOCKING_TERRAIN_ATTACK, TERRAIN);
-                const auraRange1 = RangeLib.parse('+1', u.x, u.y, BLOCKING_TERRAIN_ATTACK, TERRAIN);
+                const auraRange2 = window.Range.parse('+2', u.x, u.y, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
+                const auraRange1 = window.Range.parse('+1', u.x, u.y, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
                 this.state.units.forEach(enemy => {
                     if (enemy.dead || enemy.player === u.player) return;
                     // +2范围减攻10
@@ -1117,7 +1077,7 @@ const Game = {
                     // +1范围沉默
                     const inRange1 = auraRange1.find(p => p.x === enemy.x && p.y === enemy.y);
                     if (inRange1 && !enemy.silenced) {
-                        Effect.silence(u, enemy, 1);
+                        window.Effect.silence(u, enemy, 1);
                     }
                 });
             }
@@ -1158,7 +1118,7 @@ const Game = {
                 const dy = Math.sign(target.y - unit.y);
                 const nx = unit.x + (dx !== 0 ? dx : 0);
                 const ny = unit.y + (dy !== 0 ? dy : 0);
-                if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && !this.getUnit(nx, ny)) {
+                if (nx >= 0 && nx < window.BOARD_SIZE && ny >= 0 && ny < window.BOARD_SIZE && !this.getUnit(nx, ny)) {
                     unit.x = nx; unit.y = ny; unit.moved = true;
                 }
             }
