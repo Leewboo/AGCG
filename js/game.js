@@ -604,8 +604,10 @@ const Game = {
     },
 
     showQuote(unit, type) {
-        const quotes = unit.generalData?.quotes;
-        if (!quotes || !quotes[type] || quotes[type].length === 0) return;
+        // 确保单位有 generalData 和 quotes
+        if (!unit || !unit.generalData || !unit.generalData.quotes) return;
+        const quotes = unit.generalData.quotes;
+        if (!quotes[type] || quotes[type].length === 0) return;
         const list = quotes[type];
         const text = list[Math.floor(Math.random() * list.length)];
         const cell = document.querySelector(`#battle-board .cell[data-x="${unit.x}"][data-y="${unit.y}"]`);
