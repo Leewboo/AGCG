@@ -722,13 +722,7 @@ const Game = {
         // 普通攻击
         if (hlAttack && this.state.selectedUnit && unit && unit.player !== this.state.selectedUnit.player) {
             const attacker = this.state.selectedUnit;
-            let result;
-            // 黄忠被动：距离伤害
-            if (attacker._passive_baiBuChuanYang) {
-                result = window.Effect.distanceDamage(attacker, unit, attacker.atk);
-            } else {
-                result = window.Effect.damage(attacker, unit, attacker.atk);
-            }
+            const result = window.Effect.damage(attacker, unit, attacker.atk);
             this.addLungeAnimation(attacker, unit);
             let extraActionGranted = false;
             if (result.type === 'dodge') {

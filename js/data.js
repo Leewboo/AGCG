@@ -147,57 +147,6 @@ const GENERALS = [
         ]
     },
     {
-        id: 'huangzhong',
-        name: '黄忠',
-        hp: 130,
-        atk: 60,
-        def: 15,
-        mov: 2,
-        moveRange: ['x2', '+2'],
-        attackRange: 'r3',
-        skills: [
-            {
-                id: 'baiBuChuanYang',
-                name: '百步穿杨',
-                type: 'passive',
-                category: 'special',
-                content(a, t, gs) {
-                    a._passive_baiBuChuanYang = true;
-                    return { type: 'passive' };
-                },
-                desc: '被动：普通攻击时，距离每增加1格，伤害+5'
-            },
-            {
-                id: 'lianZhuJian',
-                name: '连珠箭',
-                type: 'active',
-                category: 'special',
-                range: 'r3',
-                energyCost: 2,
-                chargeTrigger: 'afterAction',
-                content(a, t, gs) {
-                    const { Effect } = gs._modules;
-                    return Effect.multiShot(a, t, 3, 25);
-                },
-                desc: '主动：r3范围，对目标连续射击3次，每次25伤害（需要2点能量）'
-            },
-            {
-                id: 'tianNvSanHua',
-                name: '天女散花',
-                type: 'active',
-                category: 'special',
-                range: 'r3',
-                energyCost: 3,
-                chargeTrigger: 'afterAction',
-                content(a, t, gs) {
-                    const { Effect } = gs._modules;
-                    return Effect.coneAOE(a, t, 30, gs);
-                },
-                desc: '主动：r3范围，以攻击方向为中心，扇形3格范围造成30伤害（需要3点能量）'
-            }
-        ]
-    },
-    {
         id: 'debug1', name: '调试将甲', hp: 100, atk: 20, def: 10, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
