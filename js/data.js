@@ -56,7 +56,7 @@ export const GENERALS = [
                     a._passive_changSheng = true;
                     return { type: 'passive' };
                 },
-                desc: '被动：击杀敌方武将时，立即获得一次移动和攻击机会'
+                desc: '被动：击杀敌方武将时，立即恢复移动和攻击机会'
             },
             {
                 id: 'danYong',
