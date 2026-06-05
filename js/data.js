@@ -83,6 +83,45 @@ export const GENERALS = [
         ]
     },
     {
+        id: 'guanyu',
+        name: '关羽',
+        hp: 200,
+        atk: 45,
+        def: 25,
+        mov: 2,
+        moveRange: '+2',
+        attackRange: '+1',
+        skills: [
+            {
+                id: 'weiLin',
+                name: '威临',
+                type: 'passive',
+                category: 'special',
+                content(a, t, gs) {
+                    a._passive_weiLin = true;
+                    return { type: 'passive' };
+                },
+                desc: '被动：周围+2范围内的敌方武将攻击力-10。周围+1范围内的敌方武将无法使用主动技能'
+            },
+            {
+                id: 'shuiYan',
+                name: '水淹',
+                type: 'active',
+                category: 'special',
+                range: '+3',
+                energyCost: 2,
+                content(a, t, gs) {
+                    const isRiver = TERRAIN[t.y][t.x] === 2;
+                    const dmg = isRiver ? 60 : 30;
+                    const dmgResult = Effect.damage(a, t, dmg);
+                    const slowResult = Effect.slow(a, t, 1, 2);
+                    return { ...dmgResult, type: 'shuiYan', slow: slowResult, riverBonus: isRiver };
+                },
+                desc: '主动：十字3格，对目标造成30伤害并减速1（持续2回合）。若目标在河流地形上，伤害翻倍'
+            }
+        ]
+    },
+    {
         id: 'debug1', name: '调试将甲', hp: 100, atk: 20, def: 10, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [

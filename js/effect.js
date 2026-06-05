@@ -133,6 +133,12 @@ export const Effect = {
         target.confused = turns;
         return { type: 'confuse', turns };
     },
+    silence(attacker, target, turns = 1) {
+        if (!target.debuffs) target.debuffs = [];
+        target.debuffs.push({ type: 'silence', turns });
+        target.silenced = turns;
+        return { type: 'silence', turns };
+    },
     lungeDamage(attacker, target, damage, fromX, fromY) {
         const r = this.damage(attacker, target, damage);
         return { ...r, type: 'lunge', fromX, fromY };

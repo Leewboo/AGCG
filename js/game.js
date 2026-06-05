@@ -379,8 +379,8 @@ const Game = {
             <div class="sel-info-skills">
                 ${activeSkills.map(s => {
                     const isCharged = s.energyCost !== undefined;
-                    const canUse = (!isCharged || u.energy >= s.energyCost) && !u.usedSkill;
-                    const label = isCharged ? `${s.name}(${s.energyCost}能量)` : s.name;
+                    const canUse = (!isCharged || u.energy >= s.energyCost) && !u.usedSkill && !u.silenced;
+                    const label = u.silenced ? `${s.name}(沉默)` : (isCharged ? `${s.name}(${s.energyCost}能量)` : s.name);
                     return `
                         <div class="sel-skill-wrap">
                             <button class="sel-skill-btn ${canUse ? 'available' : 'unavailable'}" data-skill="${s.id}">${label}</button>
@@ -402,6 +402,10 @@ const Game = {
                 const sid = e.currentTarget.dataset.skill;
                 const skill = u.skills.find(s => s.id === sid);
                 const isCharged = skill.energyCost !== undefined;
+                if (u.silenced) {
+                    this.state.logs.push(`${u.name} 处于沉默状态，无法使用技能`);
+                    return;
+                }
                 if (skill && (!isCharged || u.energy >= skill.energyCost) && !u.usedSkill) this.selectSkill(skill);
             };
         });
@@ -803,6 +807,22 @@ const Game = {
                 } else if (result.type === 'shredDef') {
                     this.state.logs.push(`${attacker.name} 破甲 ${unit.name}`);
                     this.showFloatingText(unit.x, unit.y, '破甲', 'damage');
+                } else if (result.type === 'shuiYan') {
+                    this.addHitAnimation(unit);
+                    const riverText = result.riverBonus ? '（河流翻倍）' : '';
+                    if (unit.dead) {
+                        this.state.logs.push(`${attacker.name} 水淹击杀 ${unit.name}${riverText}`);
+                        this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
+                        this.addDeathAnimation(unit);
+                        attacker.energy += ENERGY_ON_KILL;
+                        this.showFloatingText(attacker.x, attacker.y, `+${ENERGY_ON_KILL}能量`, 'heal');
+                    } else {
+                        this.state.logs.push(`${attacker.name} 水淹 ${unit.name} -${result.damage}${riverText}`);
+                        this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
+                    }
+                    if (result.slow) {
+                        this.showFloatingText(unit.x, unit.y, '减速', 'damage');
+                    }
                 } else if (result.heal) {
                     this.state.logs.push(`${attacker.name} ${skill.name} 治疗${result.heal}`);
                     this.showFloatingText(attacker.x, attacker.y, `+${result.heal}`, 'heal');
@@ -950,6 +970,10 @@ const Game = {
                             u.confused = 0;
                             this.state.logs.push(`${u.name} 混乱解除`);
                         }
+                        if (d.type === 'silence') {
+                            u.silenced = 0;
+                            this.state.logs.push(`${u.name} 沉默解除`);
+                        }
                     }
                 });
                 u.debuffs = newDebuffs;
@@ -964,6 +988,37 @@ const Game = {
             if (u.confused && u.confused > 0) {
                 u.confused--;
                 if (u.confused <= 0) u.confused = 0;
+            }
+            if (u.silenced && u.silenced > 0) {
+                u.silenced--;
+                if (u.silenced <= 0) {
+                    u.silenced = 0;
+                }
+            }
+        });
+
+        // 关羽【威临】光环扫描：+2范围减攻，+1范围沉默
+        this.state.units.forEach(u => {
+            if (u._passive_weiLin && !u.dead) {
+                const auraRange2 = RangeLib.parse('+2', u.x, u.y);
+                const auraRange1 = RangeLib.parse('+1', u.x, u.y);
+                this.state.units.forEach(enemy => {
+                    if (enemy.dead || enemy.player === u.player) return;
+                    // +2范围减攻10
+                    const inRange2 = auraRange2.find(p => p.x === enemy.x && p.y === enemy.y);
+                    if (inRange2 && !enemy._weiLinDebuffed) {
+                        enemy.atk = Math.max(1, enemy.atk - 10);
+                        enemy._weiLinDebuffed = true;
+                    } else if (!inRange2 && enemy._weiLinDebuffed) {
+                        enemy.atk += 10;
+                        enemy._weiLinDebuffed = false;
+                    }
+                    // +1范围沉默
+                    const inRange1 = auraRange1.find(p => p.x === enemy.x && p.y === enemy.y);
+                    if (inRange1 && !enemy.silenced) {
+                        Effect.silence(u, enemy, 1);
+                    }
+                });
             }
         });
         this.state.selectedUnit = null;
