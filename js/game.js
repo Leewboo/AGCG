@@ -76,6 +76,7 @@ const Game = {
     },
 
     startSelect() {
+        console.log('[Game] startSelect called, mode:', this.state.mode);
         this.state.currentPlayer = 1;
         this.state.players[1].generals = [];
         this.state.players[2].generals = [];
@@ -84,10 +85,13 @@ const Game = {
     },
 
     renderSelect() {
+        console.log('[Game] renderSelect called');
+        console.log('[Game] GENERALS length:', GENERALS.length);
         const title = document.getElementById('select-title');
         const count = document.getElementById('select-count');
         const list = document.getElementById('generals-list');
         const confirm = document.getElementById('confirm-select');
+        console.log('[Game] Elements found:', {title, count, list, confirm});
 
         title.textContent = `${this.state.currentPlayer === 1 ? '红方' : '蓝方'} 选将`;
         const selected = this.state.players[this.state.currentPlayer].generals;
