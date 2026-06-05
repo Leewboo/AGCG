@@ -338,39 +338,76 @@ const Game = {
     renderBattle() {
         const info = document.getElementById('turn-info');
         const board = document.getElementById('battle-board');
+        const miniMap = document.getElementById('mini-map');
         const log = document.getElementById('log-panel');
+        const sizeControls = document.querySelector('.board-size-controls');
 
         if (info) info.textContent = `第${this.state.turn}回合 ${this.state.currentPlayer === 1 ? '红方' : '蓝方'}`;
 
+        // PVE模式下，AI回合显示缩略图，玩家回合显示大棋盘
+        const isPveAiTurn = this.state.mode === 'pve' && this.state.currentPlayer === 2;
+
         if (board) {
-            board.innerHTML = '';
-            for (let y = 0; y < BOARD_SIZE; y++) {
-                for (let x = 0; x < BOARD_SIZE; x++) {
-                    const terrainId = TERRAIN[y][x];
-                    const terrain = TERRAIN_NAMES[terrainId];
-                    const terrainLabel = TERRAIN_LABELS[terrainId];
-                    const unit = this.getUnit(x, y);
-                    const hl = this.state.highlights.find(h => h.x === x && h.y === y);
+            if (isPveAiTurn) {
+                board.classList.add('hidden');
+            } else {
+                board.classList.remove('hidden');
+                board.innerHTML = '';
+                for (let y = 0; y < BOARD_SIZE; y++) {
+                    for (let x = 0; x < BOARD_SIZE; x++) {
+                        const terrainId = TERRAIN[y][x];
+                        const terrain = TERRAIN_NAMES[terrainId];
+                        const terrainLabel = TERRAIN_LABELS[terrainId];
+                        const unit = this.getUnit(x, y);
+                        const hl = this.state.highlights.find(h => h.x === x && h.y === y);
 
-                    let cellClass = `cell ${terrain}`;
-                    if (hl) cellClass += ` highlight-${hl.type}`;
+                        let cellClass = `cell ${terrain}`;
+                        if (hl) cellClass += ` highlight-${hl.type}`;
 
-                    const cell = document.createElement('div');
-                    cell.className = cellClass;
-                    cell.dataset.x = x;
-                    cell.dataset.y = y;
+                        const cell = document.createElement('div');
+                        cell.className = cellClass;
+                        cell.dataset.x = x;
+                        cell.dataset.y = y;
 
-                    let cellHtml = '';
-                    if (x === 0) cellHtml += `<span class="cell-label top-left">${y}</span>`;
-                    if (y === BOARD_SIZE - 1) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
-                    if (terrainLabel) cellHtml += `<span class="terrain-label" style="font-size:24px;opacity:0.7">${terrainLabel}</span>`;
-                    if (unit) cellHtml += this.renderUnit(unit);
-                    cell.innerHTML = cellHtml;
+                        let cellHtml = '';
+                        if (x === 0) cellHtml += `<span class="cell-label top-left">${y}</span>`;
+                        if (y === BOARD_SIZE - 1) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
+                        if (terrainLabel) cellHtml += `<span class="terrain-label" style="font-size:24px;opacity:0.7">${terrainLabel}</span>`;
+                        if (unit) cellHtml += this.renderUnit(unit);
+                        cell.innerHTML = cellHtml;
 
-                    cell.onclick = () => this.handleBattleClick(x, y);
-                    board.appendChild(cell);
+                        cell.onclick = () => this.handleBattleClick(x, y);
+                        board.appendChild(cell);
+                    }
                 }
             }
+        }
+
+        if (miniMap) {
+            if (isPveAiTurn) {
+                miniMap.classList.remove('hidden');
+                miniMap.innerHTML = '';
+                for (let y = 0; y < BOARD_SIZE; y++) {
+                    for (let x = 0; x < BOARD_SIZE; x++) {
+                        const terrainId = TERRAIN[y][x];
+                        const terrain = TERRAIN_NAMES[terrainId];
+                        const unit = this.getUnit(x, y);
+                        const cell = document.createElement('div');
+                        cell.className = `mini-cell ${terrain}`;
+                        if (unit) {
+                            cell.innerHTML = `<div class="mini-unit p${unit.player} ${unit.dead ? 'dead' : ''}">${unit.name.charAt(0)}</div>`;
+                        }
+                        miniMap.appendChild(cell);
+                    }
+                }
+            } else {
+                miniMap.classList.add('hidden');
+                miniMap.innerHTML = '';
+            }
+        }
+
+        if (sizeControls) {
+            sizeControls.style.display = isPveAiTurn ? 'none' : 'flex';
         }
 
         this.renderPlayerBars();

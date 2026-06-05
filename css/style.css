@@ -501,8 +501,9 @@ html, body {
     padding: var(--space-sm) 0;
     overflow: auto;
     display: flex;
-    align-items: flex-start;
-    justify-content: flex-start;
+    align-items: center;
+    justify-content: center;
+    position: relative;
 }
 
 .board {
@@ -515,6 +516,58 @@ html, body {
     padding: 1px;
     flex-shrink: 0;
 }
+
+.board.hidden {
+    display: none;
+}
+
+/* ---- 缩略图 ---- */
+.mini-map {
+    display: grid;
+    grid-template-columns: repeat(12, 24px);
+    grid-template-rows: repeat(12, 24px);
+    gap: 1px;
+    background: var(--border-light);
+    border: var(--border-width) solid var(--border-medium);
+    padding: 1px;
+    flex-shrink: 0;
+}
+
+.mini-map.hidden {
+    display: none;
+}
+
+.mini-cell {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: default;
+}
+
+.mini-cell.grass { background: var(--terrain-grass); }
+.mini-cell.mountain { background: var(--terrain-mountain); }
+.mini-cell.river { background: var(--terrain-river); }
+.mini-cell.city { background: var(--terrain-city); }
+.mini-cell.swamp { background: var(--terrain-swamp); }
+
+.mini-unit {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.mini-unit.p1 { background: var(--p1-primary); }
+.mini-unit.p2 { background: var(--p2-primary); }
+.mini-unit.dead { opacity: 0.2; }
 
 .cell {
     width: var(--cell-w);
