@@ -110,6 +110,7 @@ export const GENERALS = [
                 category: 'special',
                 range: '+3',
                 energyCost: 2,
+                chargeTrigger: 'afterAction',
                 content(a, t, gs) {
                     const isRiver = TERRAIN[t.y][t.x] === 2;
                     const dmg = isRiver ? 60 : 30;

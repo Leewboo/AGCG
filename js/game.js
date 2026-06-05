@@ -639,11 +639,15 @@ const Game = {
 
         // 移动
         if (hlMove && this.state.selectedUnit) {
-            this.state.selectedUnit.x = x;
-            this.state.selectedUnit.y = y;
-            this.state.selectedUnit.moved = true;
+            const mover = this.state.selectedUnit;
+            mover.x = x;
+            mover.y = y;
+            mover.moved = true;
             this.clearHighlights();
-            this.state.logs.push(`${this.state.selectedUnit.name} 移动`);
+            this.state.logs.push(`${mover.name} 移动`);
+            // 技能级充能：afterMove / afterAction
+            this.triggerSkillCharge(mover, 'afterMove');
+            this.triggerSkillCharge(mover, 'afterAction');
             this.renderBattle();
             return;
         }
@@ -692,6 +696,9 @@ const Game = {
                 this.showFloatingText(attacker.x, attacker.y, '常胜！', 'heal');
             } else {
                 attacker.attacked = true;
+                // 技能级充能：afterAttack / afterAction
+                this.triggerSkillCharge(attacker, 'afterAttack');
+                this.triggerSkillCharge(attacker, 'afterAction');
             }
             this.clearHighlights();
             this.checkWin();
@@ -936,8 +943,14 @@ const Game = {
     endTurn() {
         this.state.units.forEach(u => {
             u.moved = false; u.attacked = false; u.usedSkill = false;
-            if (!u.dead && ENERGY_ON_TURN > 0) {
-                u.energy += ENERGY_ON_TURN;
+            if (!u.dead) {
+                // 优先检查技能级 onTurn 充能，没有则使用全局 ENERGY_ON_TURN
+                const hasOnTurnSkill = (u.skills || []).some(s => s.chargeTrigger === 'onTurn');
+                if (hasOnTurnSkill) {
+                    this.triggerSkillCharge(u, 'onTurn');
+                } else if (ENERGY_ON_TURN > 0) {
+                    u.energy += ENERGY_ON_TURN;
+                }
             }
             if (u.buffs) {
                 const newBuffs = [];
@@ -1120,6 +1133,22 @@ const Game = {
 
     getUnit(x, y) {
         return this.state.units.find(u => u.x === x && u.y === y && !u.dead);
+    },
+
+    // 技能级充能触发
+    triggerSkillCharge(unit, triggerType) {
+        if (unit.dead) return;
+        const skills = unit.skills || [];
+        let charged = false;
+        skills.forEach(s => {
+            if (s.chargeTrigger === triggerType) {
+                unit.energy += 1;
+                charged = true;
+            }
+        });
+        if (charged) {
+            this.showFloatingText(unit.x, unit.y, '+1能量', 'heal');
+        }
     }
 };
 
