@@ -722,7 +722,13 @@ const Game = {
         // 普通攻击
         if (hlAttack && this.state.selectedUnit && unit && unit.player !== this.state.selectedUnit.player) {
             const attacker = this.state.selectedUnit;
-            const result = window.Effect.damage(attacker, unit, attacker.atk);
+            let result;
+            // 黄忠被动：距离伤害
+            if (attacker._passive_baiBuChuanYang) {
+                result = window.Effect.distanceDamage(attacker, unit, attacker.atk);
+            } else {
+                result = window.Effect.damage(attacker, unit, attacker.atk);
+            }
             this.addLungeAnimation(attacker, unit);
             let extraActionGranted = false;
             if (result.type === 'dodge') {
@@ -825,6 +831,25 @@ const Game = {
                         }
                         if (t.type === 'dodge') this.state.logs.push(`  ${t.name} 闪避`);
                         else this.state.logs.push(`  ${t.name} -${t.damage}`);
+                    });
+                } else if (result.type === 'multishot') {
+                    this.addHitAnimation(unit);
+                    this.state.logs.push(`${attacker.name} ${skill.name} 射击${result.hits}次，总计${result.damage}伤害`);
+                    this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
+                    if (unit.dead) this.addDeathAnimation(unit);
+                } else if (result.type === 'cone') {
+                    this.state.logs.push(`${attacker.name} ${skill.name} 扇形攻击`);
+                    result.targets.forEach(t => {
+                        const tUnit = this.state.units.find(u => u.name === t.name && !u.dead);
+                        if (tUnit) {
+                            if (t.type === 'dodge') this.showFloatingText(tUnit.x, tUnit.y, '闪避', 'dodge');
+                            else {
+                                this.showFloatingText(tUnit.x, tUnit.y, `-${t.damage}`, 'damage');
+                                this.addHitAnimation(tUnit);
+                                if (tUnit.dead) this.addDeathAnimation(tUnit);
+                            }
+                        }
+                        if (t.type === 'dodge') this.state.logs.push(`  ${t.name} -${t.damage}`);
                     });
                 } else if (result.type === 'damage') {
                     this.addHitAnimation(unit);

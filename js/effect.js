@@ -170,6 +170,48 @@ const Effect = {
         }
         return { damage: total, type: 'multishot', hits: details.length, details };
     },
+    // 距离伤害：距离越远，伤害越高
+    distanceDamage(attacker, target, baseDamage) {
+        const dist = Math.abs(target.x - attacker.x) + Math.abs(target.y - attacker.y);
+        const bonus = dist * 5; // 每格距离 +5 伤害
+        const total = baseDamage + bonus;
+        return this.damage(attacker, target, total);
+    },
+    // 扇形AOE：以攻击者为起点，向目标方向的扇形
+    coneAOE(attacker, target, damage, gameState) {
+        const dx = Math.sign(target.x - attacker.x);
+        const dy = Math.sign(target.y - attacker.y);
+        const targets = [];
+        // 扇形：向目标方向及两侧扩展
+        for (let i = 1; i <= 3; i++) {
+            for (let j = -1; j <= 1; j++) {
+                let tx, ty;
+                if (dx !== 0 && dy !== 0) {
+                    tx = attacker.x + dx * i;
+                    ty = attacker.y + dy * i + j;
+                } else if (dx !== 0) {
+                    tx = attacker.x + dx * i;
+                    ty = attacker.y + j;
+                } else {
+                    tx = attacker.x + j;
+                    ty = attacker.y + dy * i;
+                }
+                const hit = gameState.units.find(u => u.x === tx && u.y === ty && !u.dead && u.player !== attacker.player);
+                if (hit) targets.push(hit);
+            }
+        }
+        // 移除重复
+        const uniqueTargets = [];
+        targets.forEach(t => {
+            if (!uniqueTargets.find(ut => ut.id === t.id)) uniqueTargets.push(t);
+        });
+        const details = [];
+        uniqueTargets.forEach(enemy => {
+            const r = this.damage(attacker, enemy, damage);
+            details.push({ name: enemy.name, ...r });
+        });
+        return { type: 'cone', targets: details };
+    },
     // 立即获得一次额外行动机会（移动+攻击）
     grantExtraAction(target) {
         target.moved = false;
