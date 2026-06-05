@@ -148,7 +148,10 @@ const Game = {
                 const id = e.currentTarget.dataset.id;
                 const g = window.GENERALS.find(gg => gg.id === id);
                 if (g) {
-                    alert(`${g.name}`);
+                    const moveRangeStr = Array.isArray(g.moveRange) ? g.moveRange.join(', ') : g.moveRange;
+                    const attackRangeStr = Array.isArray(g.attackRange) ? g.attackRange.join(', ') : g.attackRange;
+                    const skillsDesc = g.skills.map(s => `${s.name}(${s.type === 'passive' ? '被动' : '主动'}): ${s.desc}`).join('\n');
+                    alert(`${g.name}\nHP: ${g.hp} | 攻击: ${g.atk} | 防御: ${g.def}\n移动范围: ${moveRangeStr}\n攻击范围: ${attackRangeStr}\n\n技能:\n${skillsDesc}`);
                 }
             };
         });
@@ -158,6 +161,12 @@ const Game = {
         if (this.state.currentPlayer === 1) {
             this.state.currentPlayer = 2;
             if (this.state.mode === 'pve') {
+                const available = window.GENERALS.filter(g => !this.state.players[1].generals.find(p => p.id === g.id));
+                for (let i = 0; i < 5; i++) {
+                    const idx = Math.floor(Math.random() * available.length);
+                    this.state.players[2].generals.push({ ...available[idx] });
+                    available.splice(idx, 1);
+                }
                 this.startDeploy();
             } else {
                 this.renderSelect();
@@ -197,6 +206,7 @@ const Game = {
                 const terrainId = window.TERRAIN[y][x];
                 const terrain = window.TERRAIN_NAMES[terrainId];
                 const terrainLabel = window.TERRAIN_LABELS[terrainId];
+                const unit = this.getUnit(x, y);
 
                 let cellClass = `cell ${terrain}`;
                 if (player === 1 && y >= window.BOARD_SIZE - 3) cellClass += ' deploy-zone-p1';
@@ -211,6 +221,7 @@ const Game = {
                 if (x === 0) cellHtml += `<span class="cell-label top-left">${y}</span>`;
                 if (y === window.BOARD_SIZE - 1) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
                 if (terrainLabel) cellHtml += `<span class="terrain-label" style="font-size:24px;opacity:0.7">${terrainLabel}</span>`;
+                if (unit) cellHtml += this.renderUnit(unit);
                 cell.innerHTML = cellHtml;
 
                 cell.onclick = () => this.handleDeployClick(x, y);
@@ -241,6 +252,7 @@ const Game = {
         const player = this.state.currentPlayer;
         if (player === 1 && y < window.BOARD_SIZE - 3) return;
         if (player === 2 && y > 2) return;
+        if (this.getUnit(x, y)) return;
 
         const generals = this.state.players[player].generals;
         const deployed = this.state.players[player].deployed;
@@ -263,9 +275,20 @@ const Game = {
         const unit = {
             id: Date.now() + Math.random(),
             generalId: general.id,
+            generalData: general,
             name: general.name,
             player: player,
-            x, y
+            x, y,
+            hp: general.hp,
+            maxHp: general.hp,
+            atk: general.atk,
+            def: general.def,
+            moveRange: general.moveRange || '+3',
+            attackRange: general.attackRange || '+1',
+            skills: general.skills ? [...general.skills] : [],
+            dead: false,
+            moved: false,
+            attacked: false
         };
         this.state.units.push(unit);
         deployed.push({ generalId: general.id, unitId: unit.id });
@@ -275,7 +298,7 @@ const Game = {
             if (player === 1) {
                 this.state.currentPlayer = 2;
                 if (this.state.mode === 'pve') {
-                    this.startBattle();
+                    this.deployAI();
                 } else {
                     this.renderDeploy();
                 }
@@ -285,6 +308,41 @@ const Game = {
         } else {
             this.renderDeploy();
         }
+    },
+
+    deployAI() {
+        const available = [];
+        for (let y = 0; y <= 2; y++) {
+            for (let x = 0; x < window.BOARD_SIZE; x++) {
+                if (!this.getUnit(x, y)) available.push({ x, y });
+            }
+        }
+        this.state.players[2].generals.forEach((g, i) => {
+            const posIdx = Math.floor(Math.random() * available.length);
+            const pos = available[posIdx];
+            available.splice(posIdx, 1);
+            const unit = {
+                id: Date.now() + i + Math.random(),
+                generalId: g.id,
+                generalData: g,
+                name: g.name,
+                player: 2,
+                x: pos.x, y: pos.y,
+                hp: g.hp,
+                maxHp: g.hp,
+                atk: g.atk,
+                def: g.def,
+                moveRange: g.moveRange || '+3',
+                attackRange: g.attackRange || '+1',
+                skills: g.skills ? [...g.skills] : [],
+                dead: false,
+                moved: false,
+                attacked: false
+            };
+            this.state.units.push(unit);
+            this.state.players[2].deployed.push({ generalId: g.id, unitId: unit.id });
+        });
+        this.startBattle();
     },
 
     startBattle() {
@@ -329,11 +387,7 @@ const Game = {
                     if (x === 0) cellHtml += `<span class="cell-label top-left">${y}</span>`;
                     if (y === window.BOARD_SIZE - 1) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
                     if (terrainLabel) cellHtml += `<span class="terrain-label" style="font-size:24px;opacity:0.7">${terrainLabel}</span>`;
-                    if (unit) {
-                        cellHtml += `<div class="unit p${unit.player} ${this.state.selectedUnit?.id === unit.id ? 'selected' : ''}">
-                            <div class="unit-icon">${unit.name}</div>
-                        </div>`;
-                    }
+                    if (unit) cellHtml += this.renderUnit(unit);
                     cell.innerHTML = cellHtml;
 
                     cell.onclick = () => this.handleBattleClick(x, y);
@@ -342,24 +396,61 @@ const Game = {
             }
         }
 
+        this.renderPlayerBars();
+
         if (log) log.innerHTML = this.state.logs.slice(-8).map(l => `<div class="log-entry">${l}</div>`).join('');
     },
 
-    getUnit(x, y) {
-        return this.state.units.find(u => u.x === x && u.y === y);
+    renderUnit(unit) {
+        const hpPercent = (unit.hp / unit.maxHp * 100).toFixed(0);
+        const isSelected = this.state.selectedUnit && this.state.selectedUnit.id === unit.id;
+        return `
+            <div class="unit p${unit.player} ${isSelected ? 'selected' : ''} ${unit.dead ? 'dead' : ''}">
+                <div class="unit-icon">${unit.name}</div>
+                <div class="unit-hp">
+                    <div class="unit-hp-fill" style="width: ${hpPercent}%"></div>
+                </div>
+            </div>
+        `;
     },
 
-    handleBattleClick(x, y) {
-        const unit = this.getUnit(x, y);
+    renderPlayerBars() {
+        const p1Bar = document.getElementById('player1-generals');
+        const p2Bar = document.getElementById('player2-generals');
+        if (!p1Bar || !p2Bar) return;
 
-        if (unit && unit.player === this.state.currentPlayer) {
-            this.state.selectedUnit = unit;
-            this.renderBattle();
-            return;
-        }
+        const renderBar = (player, container) => {
+            const units = this.state.units.filter(u => u.player === player && !u.dead && u.generalId);
+            container.innerHTML = units.map(u => {
+                const hpPercent = (u.hp / u.maxHp * 100).toFixed(0);
+                return `
+                    <div class="bar-general ${u.dead ? 'dead' : ''} p${player}" data-unit-id="${u.id}">
+                        <span class="bar-general-name">${u.name}</span>
+                        <div class="bar-general-hp">
+                            <div class="bar-general-hp-fill" style="width: ${hpPercent}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
 
-        this.state.selectedUnit = null;
-        this.renderBattle();
+            container.querySelectorAll('.bar-general').forEach(el => {
+                el.onclick = (e) => {
+                    const unitId = e.currentTarget.dataset.unitId;
+                    const unit = this.state.units.find(u => u.id == unitId);
+                    if (unit && !unit.dead && unit.player === this.state.currentPlayer) {
+                        this.state.selectedUnit = unit;
+                        this.state.currentSkill = null;
+                        this.state.skillPhase = null;
+                        this.state.skillTarget = null;
+                        this.showMoves(unit);
+                        this.renderBattle();
+                    }
+                };
+            });
+        };
+
+        renderBar(1, p1Bar);
+        renderBar(2, p2Bar);
     },
 
     showDetail(unit) {
@@ -369,14 +460,116 @@ const Game = {
         const skillsEl = document.getElementById('detail-skills');
 
         nameEl.textContent = unit.name;
-        statsEl.textContent = '暂无数据';
-        skillsEl.innerHTML = '';
+        const moveRangeStr = Array.isArray(unit.moveRange) ? unit.moveRange.join(', ') : unit.moveRange;
+        const attackRangeStr = Array.isArray(unit.attackRange) ? unit.attackRange.join(', ') : unit.attackRange;
+        statsEl.innerHTML = `HP: ${unit.hp}/${unit.maxHp} | 攻击: ${unit.atk} | 防御: ${unit.def}\n移动范围: ${moveRangeStr}\n攻击范围: ${attackRangeStr}`;
+
+        const skills = unit.skills || [];
+        skillsEl.innerHTML = skills.map(s => `
+            <div class="skill-item">
+                <div class="skill-name">${s.name} (${s.type === 'passive' ? '被动' : '主动'})</div>
+                <div class="skill-desc">${s.desc}</div>
+            </div>
+        `).join('') || '<div>无技能</div>';
 
         panel.classList.remove('hidden');
     },
 
     hideDetail() {
         document.getElementById('detail-panel').classList.add('hidden');
+    },
+
+    getUnit(x, y) {
+        return this.state.units.find(u => u.x === x && u.y === y);
+    },
+
+    showMoves(unit) {
+        this.state.highlights = [];
+        const blockedSet = new Set();
+        this.state.units.forEach(u => {
+            if (!u.dead) blockedSet.add(`${u.x},${u.y}`);
+        });
+
+        if (!unit.moved) {
+            const moveRange = window.Range.parse(unit.moveRange, unit.x, unit.y, window.BLOCKING_TERRAIN_MOVE, window.TERRAIN);
+            moveRange.forEach(p => {
+                if (!this.getUnit(p.x, p.y)) {
+                    this.state.highlights.push({ x: p.x, y: p.y, type: 'move' });
+                }
+            });
+        }
+
+        if (!unit.attacked) {
+            const attackRange = window.Range.parse(unit.attackRange, unit.x, unit.y, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
+            attackRange.forEach(p => {
+                const target = this.getUnit(p.x, p.y);
+                if (target && target.player !== unit.player) {
+                    this.state.highlights.push({ x: p.x, y: p.y, type: 'attack' });
+                }
+            });
+        }
+    },
+
+    handleBattleClick(x, y) {
+        const unit = this.getUnit(x, y);
+        const hlMove = this.state.highlights.find(h => h.x === x && h.y === y && h.type === 'move');
+        const hlAttack = this.state.highlights.find(h => h.x === x && h.y === y && h.type === 'attack');
+
+        if (hlMove && this.state.selectedUnit) {
+            const mover = this.state.selectedUnit;
+            mover.x = x;
+            mover.y = y;
+            mover.moved = true;
+            this.clearHighlights();
+            this.state.logs.push(`${mover.name} 移动`);
+            this.showMoves(mover);
+            this.renderBattle();
+            return;
+        }
+
+        if (hlAttack && this.state.selectedUnit && unit && unit.player !== this.state.selectedUnit.player) {
+            const attacker = this.state.selectedUnit;
+            const result = window.Effect.damage(attacker, unit, attacker.atk);
+            this.state.logs.push(`${attacker.name} 攻击 ${unit.name} -${result.damage}`);
+            this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
+            if (unit.dead) {
+                this.state.logs.push(`${unit.name} 阵亡`);
+            }
+            attacker.attacked = true;
+            this.clearHighlights();
+            this.showMoves(attacker);
+            this.checkWin();
+            this.renderBattle();
+            return;
+        }
+
+        if (unit && unit.player === this.state.currentPlayer) {
+            this.state.selectedUnit = unit;
+            this.state.currentSkill = null;
+            this.state.skillPhase = null;
+            this.state.skillTarget = null;
+            this.showMoves(unit);
+            this.renderBattle();
+            return;
+        }
+
+        this.state.selectedUnit = null;
+        this.clearHighlights();
+        this.renderBattle();
+    },
+
+    showFloatingText(x, y, text, type) {
+        const cell = document.querySelector(`#battle-board .cell[data-x="${x}"][data-y="${y}"]`);
+        if (!cell) return;
+        const el = document.createElement('div');
+        el.className = `float-text ${type}`;
+        el.textContent = text;
+        cell.appendChild(el);
+        setTimeout(() => el.remove(), 800);
+    },
+
+    clearHighlights() {
+        this.state.highlights = [];
     },
 
     endTurn() {
@@ -387,6 +580,7 @@ const Game = {
         });
 
         this.state.selectedUnit = null;
+        this.clearHighlights();
 
         if (this.state.currentPlayer === 2) {
             this.state.turn++;
@@ -397,13 +591,61 @@ const Game = {
             this.state.logs.push('蓝方回合');
         }
 
+        if (this.state.mode === 'pve' && this.state.currentPlayer === 2) {
+            this.aiTurn();
+        } else {
+            this.renderBattle();
+        }
+    },
+
+    aiTurn() {
+        const aiUnits = this.state.units.filter(u => u.player === 2 && !u.dead);
+        aiUnits.forEach(unit => {
+            const enemies = this.state.units.filter(e => e.player === 1 && !e.dead);
+            if (enemies.length === 0) return;
+            let target = enemies[0];
+            let minDist = 999;
+            enemies.forEach(e => {
+                const dist = Math.abs(e.x - unit.x) + Math.abs(e.y - unit.y);
+                if (dist < minDist) { minDist = dist; target = e; }
+            });
+
+            if (!unit.moved && minDist > 1) {
+                const dx = Math.sign(target.x - unit.x);
+                const dy = Math.sign(target.y - unit.y);
+                const nx = unit.x + (dx !== 0 ? dx : 0);
+                const ny = unit.y + (dy !== 0 ? dy : 0);
+                if (nx >= 0 && nx < window.BOARD_SIZE && ny >= 0 && ny < window.BOARD_SIZE && !this.getUnit(nx, ny)) {
+                    unit.x = nx; unit.y = ny; unit.moved = true;
+                }
+            }
+
+            const newDist = Math.abs(target.x - unit.x) + Math.abs(target.y - unit.y);
+            if (newDist <= 1 && !unit.attacked) {
+                const result = window.Effect.damage(unit, target, unit.atk);
+                this.state.logs.push(`${unit.name} 攻击 ${target.name} -${result.damage}`);
+                if (target.dead) {
+                    this.state.logs.push(`${target.name} 阵亡`);
+                }
+                unit.attacked = true;
+            }
+        });
         this.checkWin();
-        this.renderBattle();
+
+        setTimeout(() => {
+            this.state.units.forEach(u => {
+                u.moved = false; u.attacked = false;
+            });
+            this.state.turn++;
+            this.state.currentPlayer = 1;
+            this.state.logs.push(`第${this.state.turn}回合 红方`);
+            this.renderBattle();
+        }, 300);
     },
 
     checkWin() {
-        const p1Alive = this.state.units.filter(u => u.player === 1 && u.generalId).length;
-        const p2Alive = this.state.units.filter(u => u.player === 2 && u.generalId).length;
+        const p1Alive = this.state.units.filter(u => u.player === 1 && !u.dead && u.generalId).length;
+        const p2Alive = this.state.units.filter(u => u.player === 2 && !u.dead && u.generalId).length;
         if (p1Alive === 0) this.endGame(2);
         else if (p2Alive === 0) this.endGame(1);
     },
