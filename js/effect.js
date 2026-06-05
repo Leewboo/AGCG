@@ -1,7 +1,7 @@
 // ================================
 // 效果系统
 // ================================
-export const Effect = {
+const Effect = {
     damage(attacker, target, damage) {
         if (target.dodgeRate && Math.random() < target.dodgeRate) {
             return { damage: 0, type: 'dodge' };
@@ -199,3 +199,5 @@ export const Effect = {
         return { type: 'moveTo', x, y };
     }
 };
+
+window.Effect = Effect;

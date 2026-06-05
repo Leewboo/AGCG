@@ -1,11 +1,3 @@
-import { Range as RangeLib } from './range.js';
-import { Effect } from './effect.js';
-import {
-    BOARD_SIZE, TERRAIN, TERRAIN_NAMES, TERRAIN_LABELS,
-    BLOCKING_TERRAIN_MOVE, BLOCKING_TERRAIN_ATTACK,
-    SUMMONS, GENERALS
-} from './data.js';
-
 // ================================
 // 游戏逻辑
 // ================================
@@ -30,7 +22,7 @@ const Game = {
     init() {
         console.log('[Game] init called');
         // 把 Range 和 Effect 挂载到 gameState 供使用
-        this.state._modules = { Range: RangeLib, Effect };
+        this.state._modules = { Range: window.Range, Effect: window.Effect };
         this.bindEvents();
         this.showScreen('menu');
         console.log('[Game] init done');
@@ -1248,7 +1240,9 @@ const Game = {
     }
 };
 
+window.Game = Game;
+
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('[DOM] DOMContentLoaded fired');
     Game.init();
-    window.Game = Game;
 });

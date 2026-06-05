@@ -1,7 +1,8 @@
 // ================================
 // 范围系统
 // ================================
-export const BOARD_SIZE = 12;
+const BOARD_SIZE = 12;
+window.BOARD_SIZE = BOARD_SIZE;
 
 // 地形阻断辅助: 检查某坐标是否被指定地形集合阻断
 function isTerrainBlocked(x, y, terrainSet, terrainMap) {
@@ -10,7 +11,7 @@ function isTerrainBlocked(x, y, terrainSet, terrainMap) {
     return terrainSet.has(tid);
 }
 
-export const Range = {
+const Range = {
     plusBlocked(n, x, y, blockedSet, terrainBlockSet, terrainMap) {
         const result = [];
         const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];
@@ -157,3 +158,5 @@ export const Range = {
         return result;
     }
 };
+
+window.Range = Range;
