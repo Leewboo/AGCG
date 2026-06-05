@@ -37,123 +37,85 @@ window.BLOCKING_TERRAIN_ATTACK = BLOCKING_TERRAIN_ATTACK;
 
 const GENERALS = [
     {
-        id: 'test1',
-        name: '勇将',
-        hp: 150,
+        id: 'zhaoyun',
+        name: '赵云',
+        hp: 180,
+        atk: 50,
+        def: 20,
+        mov: 3,
+        moveRange: '+3',
+        attackRange: '+1',
+        skills: [
+            {
+                id: 'changsheng',
+                name: '常胜',
+                type: 'passive',
+                category: 'special',
+                content(a, t, gs) {
+                    a._passive_changsheng = true;
+                    return { type: 'passive' };
+                },
+                desc: '被动：击杀敌方武将时，立即恢复移动和攻击机会'
+            },
+            {
+                id: 'danyong',
+                name: '胆勇',
+                type: 'active',
+                category: 'special',
+                range: '+4',
+                step1: 'selectEnemy',
+                step1Range: '+4',
+                step2: 'selectLanding',
+                step2Range: 'r2',
+                content(a, t, gs, landingPos) {
+                    const { Effect } = gs._modules;
+                    const moveResult = Effect.moveTo(a, landingPos.x, landingPos.y);
+                    const dmgResult = Effect.damage(a, t, 30);
+                    return { ...dmgResult, type: 'danyong', move: moveResult };
+                },
+                desc: '主动：十字4格选择敌方棋子，然后在其r2范围内选择一个空格作为落点，突进造成30伤害（每回合限用一次）'
+            }
+        ]
+    },
+    {
+        id: 'guanyu',
+        name: '关羽',
+        hp: 200,
         atk: 45,
         def: 25,
-        moveRange: '+3',
-        attackRange: '+1',
-        skills: [
-            { id: 'power', name: '猛击', type: 'passive', desc: '攻击时有50%概率造成额外20伤害' }
-        ]
-    },
-    {
-        id: 'test2',
-        name: '智将',
-        hp: 120,
-        atk: 30,
-        def: 20,
-        moveRange: '+2',
-        attackRange: '+2',
-        skills: [
-            { id: 'smart', name: '智谋', type: 'passive', desc: '每回合开始时，如果没有移动，可以攻击两次' }
-        ]
-    },
-    {
-        id: 'test3',
-        name: '速将',
-        hp: 100,
-        atk: 35,
-        def: 15,
-        moveRange: '+4',
-        attackRange: '+1',
-        skills: [
-            { id: 'speed', name: '疾风', type: 'passive', desc: '移动后可以额外移动1格' }
-        ]
-    },
-    {
-        id: 'test4',
-        name: '守将',
-        hp: 200,
-        atk: 25,
-        def: 40,
+        mov: 2,
         moveRange: '+2',
         attackRange: '+1',
         skills: [
-            { id: 'defend', name: '坚守', type: 'passive', desc: '没有移动时，受到的伤害减少30%' }
-        ]
-    },
-    {
-        id: 'test5',
-        name: '弓将',
-        hp: 110,
-        atk: 50,
-        def: 15,
-        moveRange: '+2',
-        attackRange: '+3',
-        skills: [
-            { id: 'archer', name: '精准', type: 'passive', desc: '攻击距离越远，伤害越高，每格+10伤害' }
-        ]
-    },
-    {
-        id: 'test6',
-        name: '猛将',
-        hp: 180,
-        atk: 55,
-        def: 20,
-        moveRange: '+3',
-        attackRange: '+1',
-        skills: [
-            { id: 'fury', name: '暴怒', type: 'passive', desc: '血量越低，攻击力越高' }
-        ]
-    },
-    {
-        id: 'test7',
-        name: '贤将',
-        hp: 130,
-        atk: 35,
-        def: 25,
-        moveRange: '+3',
-        attackRange: '+1',
-        skills: [
-            { id: 'heal', name: '仁心', type: 'passive', desc: '回合结束时，治疗周围一格友方单位20点血' }
-        ]
-    },
-    {
-        id: 'test8',
-        name: '骑将',
-        hp: 140,
-        atk: 40,
-        def: 20,
-        moveRange: ['+3', 'x3'],
-        attackRange: '+1',
-        skills: [
-            { id: 'charge', name: '冲锋', type: 'passive', desc: '移动距离超过2格，攻击伤害+30' }
-        ]
-    },
-    {
-        id: 'test9',
-        name: '御将',
-        hp: 160,
-        atk: 30,
-        def: 35,
-        moveRange: '+2',
-        attackRange: '+2',
-        skills: [
-            { id: 'counter', name: '反击', type: 'passive', desc: '被攻击时有30%概率反击' }
-        ]
-    },
-    {
-        id: 'test10',
-        name: '骁将',
-        hp: 170,
-        atk: 50,
-        def: 20,
-        moveRange: '+3',
-        attackRange: '+1',
-        skills: [
-            { id: 'brave', name: '骁勇', type: 'passive', desc: '击杀敌人后，可以立即再次行动' }
+            {
+                id: 'weilin',
+                name: '威临',
+                type: 'passive',
+                category: 'special',
+                content(a, t, gs) {
+                    a._passive_weilin = true;
+                    return { type: 'passive' };
+                },
+                desc: '被动：周围+2范围内的敌方武将攻击力-10。周围+1范围内的敌方武将无法使用主动技能'
+            },
+            {
+                id: 'shuiyan',
+                name: '水淹',
+                type: 'active',
+                category: 'special',
+                range: '+3',
+                energyCost: 2,
+                chargeTrigger: 'afterAction',
+                content(a, t, gs) {
+                    const { Effect } = gs._modules;
+                    const isRiver = TERRAIN[t.y] && TERRAIN[t.y][t.x] === 2;
+                    const dmg = isRiver ? 60 : 30;
+                    const dmgResult = Effect.damage(a, t, dmg);
+                    const slowResult = Effect.slow(a, t, 1, 2);
+                    return { ...dmgResult, type: 'shuiyan', slow: slowResult, riverBonus: isRiver };
+                },
+                desc: '主动：十字3格，对目标造成30伤害并减速1（持续2回合）。若目标在河流地形上，伤害翻倍'
+            }
         ]
     }
 ];
