@@ -46,6 +46,7 @@
     --terrain-river: #a8c8d8;
     --terrain-city: #d4c898;
     --terrain-swamp: #a8b8a0;
+    --terrain-bridge: #c8b898;
 
     /* 间距系统 */
     --space-xs: 4px;
@@ -542,6 +543,7 @@ html, body {
 .cell.river { background: var(--terrain-river); }
 .cell.city { background: var(--terrain-city); }
 .cell.swamp { background: var(--terrain-swamp); }
+.cell.bridge { background: var(--terrain-bridge); }
 
 /* 部署区 */
 .cell.deploy-zone-p1 {
