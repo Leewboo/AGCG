@@ -55,24 +55,35 @@ const Game = {
         const customBtn = document.getElementById('custom-btn');
         console.log('[Game] Buttons found:', {pvpBtn, pveBtn, customBtn});
         
-        pvpBtn.onclick = () => {
-            console.log('[Game] pvp-btn clicked');
-            this.state.mode = 'pvp';
-            this.startSelect();
-        };
-        pveBtn.onclick = () => {
-            console.log('[Game] pve-btn clicked');
-            this.state.mode = 'pve';
-            this.startSelect();
-        };
-        document.getElementById('custom-btn').onclick = () => alert('DIY武将功能即将开放！');
-        document.getElementById('confirm-select').onclick = () => this.confirmSelect();
-        document.getElementById('end-turn').onclick = () => this.endTurn();
-        document.getElementById('restart-btn').onclick = () => this.resetGame();
-        document.getElementById('close-detail').onclick = () => this.hideDetail();
-        document.getElementById('detail-panel').onclick = (e) => {
-            if (e.target.id === 'detail-panel') this.hideDetail();
-        };
+        if (pvpBtn) {
+            pvpBtn.addEventListener('click', () => {
+                console.log('[Game] pvp-btn clicked');
+                this.state.mode = 'pvp';
+                this.startSelect();
+            });
+        }
+        if (pveBtn) {
+            pveBtn.addEventListener('click', () => {
+                console.log('[Game] pve-btn clicked');
+                this.state.mode = 'pve';
+                this.startSelect();
+            });
+        }
+        if (customBtn) customBtn.addEventListener('click', () => alert('DIY武将功能即将开放！'));
+        const confirmSelect = document.getElementById('confirm-select');
+        const endTurn = document.getElementById('end-turn');
+        const restartBtn = document.getElementById('restart-btn');
+        const closeDetail = document.getElementById('close-detail');
+        const detailPanel = document.getElementById('detail-panel');
+        if (confirmSelect) confirmSelect.addEventListener('click', () => this.confirmSelect());
+        if (endTurn) endTurn.addEventListener('click', () => this.endTurn());
+        if (restartBtn) restartBtn.addEventListener('click', () => this.resetGame());
+        if (closeDetail) closeDetail.addEventListener('click', () => this.hideDetail());
+        if (detailPanel) {
+            detailPanel.addEventListener('click', (e) => {
+                if (e.target.id === 'detail-panel') this.hideDetail();
+            });
+        }
         // 棋盘大小滑块
         const wSlider = document.getElementById('cell-width');
         const hSlider = document.getElementById('cell-height');
