@@ -29,8 +29,8 @@ const Game = {
 
     init() {
         console.log('[Game] init called');
-        // 把 Range 挂载到 gameState 供 Effect 使用
-        this.state._modules = { Range: RangeLib };
+        // 把 Range 和 Effect 挂载到 gameState 供使用
+        this.state._modules = { Range: RangeLib, Effect };
         this.bindEvents();
         this.showScreen('menu');
         console.log('[Game] init done');

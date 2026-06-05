@@ -1,7 +1,6 @@
 // ================================
 // 游戏数据
 // ================================
-import { Effect } from './effect.js';
 
 export const BOARD_SIZE = 12;
 
@@ -88,6 +87,7 @@ export const GENERALS = [
                 content(a, t, gs, landingPos) {
                     // landingPos 是 {x, y} 落点
                     // 先移动，再造成伤害
+                    const { Effect } = gs._modules;
                     const moveResult = Effect.moveTo(a, landingPos.x, landingPos.y);
                     const dmgResult = Effect.damage(a, t, 30);
                     return { ...dmgResult, type: 'danYong', move: moveResult };
@@ -134,6 +134,7 @@ export const GENERALS = [
                 energyCost: 2,
                 chargeTrigger: 'afterAction',
                 content(a, t, gs) {
+                    const { Effect } = gs._modules;
                     const isRiver = TERRAIN[t.y] && TERRAIN[t.y][t.x] === 2;
                     const dmg = isRiver ? 60 : 30;
                     const dmgResult = Effect.damage(a, t, dmg);
@@ -148,63 +149,63 @@ export const GENERALS = [
         id: 'debug1', name: '调试将甲', hp: 100, atk: 20, def: 10, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
-            { id: 'testDmg1', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+            { id: 'testDmg1', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
         ]
     },
     {
         id: 'debug2', name: '调试将乙', hp: 110, atk: 22, def: 12, mov: 2,
         moveRange: '+2', attackRange: '+1',
         skills: [
-            { id: 'testDmg2', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+            { id: 'testDmg2', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
         ]
     },
     {
         id: 'debug3', name: '调试将丙', hp: 90, atk: 25, def: 8, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
-            { id: 'testDmg3', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+            { id: 'testDmg3', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
         ]
     },
     {
         id: 'debug4', name: '调试将丁', hp: 120, atk: 18, def: 15, mov: 2,
         moveRange: '+2', attackRange: '+1',
         skills: [
-            { id: 'testDmg4', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+            { id: 'testDmg4', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
         ]
     },
     {
         id: 'debug5', name: '调试将戊', hp: 95, atk: 24, def: 11, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
-            { id: 'testDmg5', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+            { id: 'testDmg5', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
         ]
     },
     {
         id: 'debug6', name: '调试将己', hp: 105, atk: 19, def: 14, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
-            { id: 'testDmg6', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+            { id: 'testDmg6', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
         ]
     },
     {
         id: 'debug7', name: '调试将庚', hp: 85, atk: 28, def: 9, mov: 4,
         moveRange: '+4', attackRange: '+1',
         skills: [
-            { id: 'testDmg7', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+            { id: 'testDmg7', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
         ]
     },
     {
         id: 'debug8', name: '调试将辛', hp: 115, atk: 17, def: 18, mov: 2,
         moveRange: '+2', attackRange: '+1',
         skills: [
-            { id: 'testDmg8', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+            { id: 'testDmg8', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
         ]
     },
     {
         id: 'debug9', name: '调试将壬', hp: 100, atk: 21, def: 13, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
-            { id: 'testDmg9', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t) { return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
+            { id: 'testDmg9', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
         ]
     }
 ];
