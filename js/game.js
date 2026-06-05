@@ -28,23 +28,40 @@ const Game = {
     },
 
     init() {
+        console.log('[Game] init called');
         // 把 Range 挂载到 gameState 供 Effect 使用
         this.state._modules = { Range: RangeLib };
         this.bindEvents();
         this.showScreen('menu');
+        console.log('[Game] init done');
     },
 
     showScreen(screenId) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(`${screenId}-screen`).classList.add('active');
+        console.log('[Game] showScreen called with:', screenId);
+        const screens = document.querySelectorAll('.screen');
+        console.log('[Game] All screens found:', screens);
+        screens.forEach(s => s.classList.remove('active'));
+        const targetScreen = document.getElementById(`${screenId}-screen`);
+        console.log('[Game] Target screen:', targetScreen);
+        if (targetScreen) {
+            targetScreen.classList.add('active');
+        }
     },
 
     bindEvents() {
-        document.getElementById('pvp-btn').onclick = () => {
+        console.log('[Game] bindEvents called');
+        const pvpBtn = document.getElementById('pvp-btn');
+        const pveBtn = document.getElementById('pve-btn');
+        const customBtn = document.getElementById('custom-btn');
+        console.log('[Game] Buttons found:', {pvpBtn, pveBtn, customBtn});
+        
+        pvpBtn.onclick = () => {
+            console.log('[Game] pvp-btn clicked');
             this.state.mode = 'pvp';
             this.startSelect();
         };
-        document.getElementById('pve-btn').onclick = () => {
+        pveBtn.onclick = () => {
+            console.log('[Game] pve-btn clicked');
             this.state.mode = 'pve';
             this.startSelect();
         };
