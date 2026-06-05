@@ -52,6 +52,14 @@ export const GENERALS = [
         mov: 3,
         moveRange: '+3',
         attackRange: '+1',
+        quotes: {
+            move: ['长枪所向，披靡万里！', '七进七出，何惧之有？'],
+            attack: ['胆敢挡我？', '看枪！'],
+            skill: ['一身是胆！', '纵马长驱！'],
+            kill: ['常胜将军，岂是虚言？', '又下一城！'],
+            hurt: ['这点伤，算什么！', '再来！'],
+            death: ['主公……云……尽力了……']
+        },
         skills: [
             {
                 id: 'changSheng',
@@ -97,6 +105,14 @@ export const GENERALS = [
         mov: 2,
         moveRange: '+2',
         attackRange: '+1',
+        quotes: {
+            move: ['关某去也！', '青龙偃月，所向无前！'],
+            attack: ['匹夫受死！', '看刀！'],
+            skill: ['水淹七军！', '威震华夏！'],
+            kill: ['插标卖首之辈！', '又一个！'],
+            hurt: ['哼！', '雕虫小技！'],
+            death: ['桃园之约……关某……来了……']
+        },
         skills: [
             {
                 id: 'weiLin',
