@@ -44,19 +44,6 @@ const SUMMONS = {
 };
 window.SUMMONS = SUMMONS;
 
-// 能量获取条件（已废弃，改为技能级充能机制 chargeTrigger）
-const ENERGY_ON_KILL = 0;
-window.ENERGY_ON_KILL = ENERGY_ON_KILL;
-
-const ENERGY_ON_HURT = 0;
-window.ENERGY_ON_HURT = ENERGY_ON_HURT;
-
-const ENERGY_ON_TURN = 0;
-window.ENERGY_ON_TURN = ENERGY_ON_TURN;
-
-const ENERGY_ON_ATTACK = 0;
-window.ENERGY_ON_ATTACK = ENERGY_ON_ATTACK;
-
 // 武将数据
 const GENERALS = [
     {
@@ -144,69 +131,6 @@ const GENERALS = [
                 },
                 desc: '主动：十字3格，对目标造成30伤害并减速1（持续2回合）。若目标在河流地形上，伤害翻倍'
             }
-        ]
-    },
-    {
-        id: 'debug1', name: '调试将甲', hp: 100, atk: 20, def: 10, mov: 3,
-        moveRange: '+3', attackRange: '+1',
-        skills: [
-            { id: 'testDmg1', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
-        ]
-    },
-    {
-        id: 'debug2', name: '调试将乙', hp: 110, atk: 22, def: 12, mov: 2,
-        moveRange: '+2', attackRange: '+1',
-        skills: [
-            { id: 'testDmg2', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
-        ]
-    },
-    {
-        id: 'debug3', name: '调试将丙', hp: 90, atk: 25, def: 8, mov: 3,
-        moveRange: '+3', attackRange: '+1',
-        skills: [
-            { id: 'testDmg3', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
-        ]
-    },
-    {
-        id: 'debug4', name: '调试将丁', hp: 120, atk: 18, def: 15, mov: 2,
-        moveRange: '+2', attackRange: '+1',
-        skills: [
-            { id: 'testDmg4', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
-        ]
-    },
-    {
-        id: 'debug5', name: '调试将戊', hp: 95, atk: 24, def: 11, mov: 3,
-        moveRange: '+3', attackRange: '+1',
-        skills: [
-            { id: 'testDmg5', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
-        ]
-    },
-    {
-        id: 'debug6', name: '调试将己', hp: 105, atk: 19, def: 14, mov: 3,
-        moveRange: '+3', attackRange: '+1',
-        skills: [
-            { id: 'testDmg6', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
-        ]
-    },
-    {
-        id: 'debug7', name: '调试将庚', hp: 85, atk: 28, def: 9, mov: 4,
-        moveRange: '+4', attackRange: '+1',
-        skills: [
-            { id: 'testDmg7', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
-        ]
-    },
-    {
-        id: 'debug8', name: '调试将辛', hp: 115, atk: 17, def: 18, mov: 2,
-        moveRange: '+2', attackRange: '+1',
-        skills: [
-            { id: 'testDmg8', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
-        ]
-    },
-    {
-        id: 'debug9', name: '调试将壬', hp: 100, atk: 21, def: 13, mov: 3,
-        moveRange: '+3', attackRange: '+1',
-        skills: [
-            { id: 'testDmg9', name: '测试打击', type: 'active', category: 'normal', range: '+2', energyCost: 1, content(a, t, gs) { const { Effect } = gs._modules; return Effect.damage(a, t, 10); }, desc: '十字2格，造成10伤害' }
         ]
     }
 ];
