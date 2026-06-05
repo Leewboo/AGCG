@@ -28,6 +28,10 @@
     --p2-primary: #5c7cb8;
     --p2-bg: #d8e0f0;
 
+    /* 棋盘格子尺寸 */
+    --cell-w: 52px;
+    --cell-h: 52px;
+
     /* 高亮 */
     --hl-move: #7db87d;
     --hl-move-bg: #c8e8c8;
@@ -460,29 +464,61 @@ html, body {
     color: var(--text-inverse);
 }
 
-/* ---- 棋盘 ---- */
-.board-wrapper {
-    flex: 1;
+/* ---- 棋盘大小控制 ---- */
+.board-size-controls {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: var(--space-lg);
+    padding: var(--space-xs) 0;
+    flex-shrink: 0;
+}
+
+.size-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    letter-spacing: 1px;
+}
+
+.size-label input[type="range"] {
+    width: 80px;
+    cursor: pointer;
+}
+
+.size-label span {
+    font-family: var(--font-mono);
+    min-width: 20px;
+    text-align: right;
+}
+
+/* ---- 棋盘 ---- */
+.board-wrapper {
+    flex: 1;
     min-height: 0;
     padding: var(--space-sm) 0;
+    overflow: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
 }
 
 .board {
     display: grid;
-    grid-template-columns: repeat(12, 52px);
-    grid-template-rows: repeat(12, 52px);
+    grid-template-columns: repeat(12, var(--cell-w));
+    grid-template-rows: repeat(12, var(--cell-h));
     gap: 1px;
     background: var(--border-light);
     border: var(--border-width) solid var(--border-medium);
     padding: 1px;
+    flex-shrink: 0;
 }
 
 .cell {
-    width: 52px;
-    height: 52px;
+    width: var(--cell-w);
+    height: var(--cell-h);
     background: var(--terrain-grass);
     display: flex;
     align-items: center;
@@ -599,25 +635,24 @@ html, body {
     font-weight: 600;
     position: relative;
     z-index: 10;
-    background: var(--bg-primary);
-    border: var(--border-width) solid var(--border-medium);
+    background: var(--bg-tertiary);
+    border: none;
     transition: all 0.15s ease;
 }
 
 .unit.p1 {
-    background: var(--p1-bg);
-    border-color: var(--p1-primary);
+    background: var(--p1-primary);
+    color: var(--text-inverse);
 }
 
 .unit.p2 {
-    background: var(--p2-bg);
-    border-color: var(--p2-primary);
+    background: var(--p2-primary);
+    color: var(--text-inverse);
 }
 
 .unit.selected {
-    border-color: #5ca85c;
-    border-width: 3px;
-    box-shadow: 0 0 0 1px rgba(92, 168, 92, 0.3);
+    outline: 3px solid #5ca85c;
+    outline-offset: -1px;
 }
 
 .unit-icon {
@@ -637,7 +672,7 @@ html, body {
     left: 8%;
     width: 84%;
     height: 4px;
-    background: var(--bg-tertiary);
+    background: rgba(0,0,0,0.25);
     border-radius: 2px;
     overflow: hidden;
 }
@@ -1123,8 +1158,8 @@ html, body {
     .general-icon { font-size: 28px; }
     .general-name { font-size: 14px; }
 
-    .board { grid-template-columns: repeat(12, 42px); grid-template-rows: repeat(12, 42px); }
-    .cell { width: 42px; height: 42px; font-size: 18px; }
+    .board-size-controls { gap: var(--space-md); }
+    .size-label input[type="range"] { width: 60px; }
     .unit-icon { font-size: 13px; }
     .terrain-label { font-size: 16px; }
 
@@ -1138,8 +1173,9 @@ html, body {
 }
 
 @media (max-width: 480px) {
-    .board { grid-template-columns: repeat(12, 34px); grid-template-rows: repeat(12, 34px); }
-    .cell { width: 34px; height: 34px; font-size: 14px; }
+    .board-size-controls { gap: var(--space-sm); }
+    .size-label { font-size: 10px; }
+    .size-label input[type="range"] { width: 50px; }
     .unit-icon { font-size: 11px; }
     .unit-hp { height: 3px; bottom: 2px; }
 
@@ -1156,8 +1192,7 @@ html, body {
 }
 
 @media (max-width: 400px) {
-    .board { grid-template-columns: repeat(12, 28px); grid-template-rows: repeat(12, 28px); gap: 1px; }
-    .cell { width: 28px; height: 28px; font-size: 11px; }
+    .board-size-controls { display: none; }
     .unit-icon { font-size: 9px; }
     .cell-label { font-size: 8px; }
     .terrain-label { font-size: 12px; }

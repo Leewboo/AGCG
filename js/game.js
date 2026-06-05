@@ -55,6 +55,23 @@ const Game = {
         document.getElementById('detail-panel').onclick = (e) => {
             if (e.target.id === 'detail-panel') this.hideDetail();
         };
+        // 棋盘大小滑块
+        const wSlider = document.getElementById('cell-width');
+        const hSlider = document.getElementById('cell-height');
+        if (wSlider) {
+            wSlider.oninput = (e) => {
+                const val = e.target.value;
+                document.getElementById('cell-width-val').textContent = val;
+                document.documentElement.style.setProperty('--cell-w', val + 'px');
+            };
+        }
+        if (hSlider) {
+            hSlider.oninput = (e) => {
+                const val = e.target.value;
+                document.getElementById('cell-height-val').textContent = val;
+                document.documentElement.style.setProperty('--cell-h', val + 'px');
+            };
+        }
     },
 
     startSelect() {
