@@ -603,37 +603,6 @@ const Game = {
         unitEl.classList.add('dying');
     },
 
-    showQuote(unit, type) {
-        // 确保单位有 generalData 和 quotes
-        if (!unit || !unit.generalData || !unit.generalData.quotes) {
-            console.log('[Quote] 缺少 unit/generalData/quotes:', {unit: !!unit, generalData: !!unit?.generalData, quotes: !!unit?.generalData?.quotes});
-            return;
-        }
-        const quotes = unit.generalData.quotes;
-        if (!quotes[type] || quotes[type].length === 0) {
-            console.log('[Quote] 语录类型为空:', type, quotes[type]);
-            return;
-        }
-        const list = quotes[type];
-        const text = list[Math.floor(Math.random() * list.length)];
-        console.log('[Quote] 显示语录:', unit.name, type, text);
-        const cell = document.querySelector(`#battle-board .cell[data-x="${unit.x}"][data-y="${unit.y}"]`);
-        if (!cell) {
-            console.log('[Quote] 未找到 cell:', unit.x, unit.y);
-            return;
-        }
-        // 避免重复显示多个语录
-        const existing = cell.querySelector('.quote-bubble');
-        if (existing) existing.remove();
-        const bubble = document.createElement('div');
-        bubble.className = 'quote-bubble';
-        bubble.textContent = text;
-        cell.appendChild(bubble);
-        setTimeout(() => {
-            if (bubble.parentNode) bubble.remove();
-        }, 3000);
-    },
-
     renderUnit(unit) {
         const hpPercent = (unit.hp / unit.maxHp * 100).toFixed(0);
         const isSelected = this.state.selectedUnit && this.state.selectedUnit.id === unit.id;
@@ -714,16 +683,12 @@ const Game = {
                 this.state.logs.push(`${attacker.name} 胆勇击杀 ${target.name}`);
                 this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
                 this.addDeathAnimation(target);
-                this.showQuote(attacker, 'kill');
-                this.showQuote(target, 'death');
                 if (attacker._passive_changSheng && target.generalId) {
                     extraActionGranted = true;
                 }
             } else {
                 this.state.logs.push(`${attacker.name} 胆勇 ${target.name} -${result.damage}`);
                 this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
-                this.showQuote(attacker, 'skill');
-                this.showQuote(target, 'hurt');
             }
 
             if (extraActionGranted) {
@@ -747,7 +712,6 @@ const Game = {
             mover.moved = true;
             this.clearHighlights();
             this.state.logs.push(`${mover.name} 移动`);
-            this.showQuote(mover, 'move');
             // 技能级充能：afterMove / afterAction
             this.triggerSkillCharge(mover, 'afterMove');
             this.triggerSkillCharge(mover, 'afterAction');
@@ -764,30 +728,24 @@ const Game = {
             if (result.type === 'dodge') {
                 this.state.logs.push(`${unit.name} 闪避了攻击！`);
                 this.showFloatingText(unit.x, unit.y, '闪避', 'dodge');
-                this.showQuote(attacker, 'attack');
             } else {
                 this.addHitAnimation(unit);
                 this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
                 if (unit.dead) {
                     this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
                     this.addDeathAnimation(unit);
-                    this.showQuote(attacker, 'kill');
-                    this.showQuote(unit, 'death');
                     // 常胜被动
                     if (attacker._passive_changSheng && unit.generalId) {
                         extraActionGranted = true;
                     }
                 } else {
                     this.state.logs.push(`${attacker.name} 攻击 ${unit.name} -${result.damage}`);
-                    this.showQuote(attacker, 'attack');
-                    this.showQuote(unit, 'hurt');
                 }
             }
             if (result.counter) {
                 this.state.logs.push(`${unit.name} 反击 -${result.counter}`);
                 this.showFloatingText(attacker.x, attacker.y, `反击-${result.counter}`, 'counter');
                 this.addHitAnimation(attacker);
-                this.showQuote(unit, 'attack');
             }
             if (extraActionGranted) {
                 window.Effect.grantExtraAction(attacker);
@@ -875,16 +833,12 @@ const Game = {
                         this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
                         this.addDeathAnimation(unit);
-                        this.showQuote(attacker, 'kill');
-                        this.showQuote(unit, 'death');
                         if (attacker._passive_changSheng && unit.generalId) {
                             extraActionGranted = true;
                         }
                     } else {
                         this.state.logs.push(`${attacker.name} ${skill.name} ${unit.name} -${result.damage}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
-                        this.showQuote(attacker, 'skill');
-                        this.showQuote(unit, 'hurt');
                     }
                     if (extraActionGranted) {
                         window.Effect.grantExtraAction(attacker);
@@ -922,13 +876,9 @@ const Game = {
                         this.state.logs.push(`${attacker.name} 水淹击杀 ${unit.name}${riverText}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
                         this.addDeathAnimation(unit);
-                        this.showQuote(attacker, 'skill');
-                        this.showQuote(unit, 'death');
                     } else {
                         this.state.logs.push(`${attacker.name} 水淹 ${unit.name} -${result.damage}${riverText}`);
                         this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
-                        this.showQuote(attacker, 'skill');
-                        this.showQuote(unit, 'hurt');
                     }
                     if (result.slow) {
                         this.showFloatingText(unit.x, unit.y, '减速', 'damage');
@@ -936,10 +886,8 @@ const Game = {
                 } else if (result.heal) {
                     this.state.logs.push(`${attacker.name} ${skill.name} 治疗${result.heal}`);
                     this.showFloatingText(attacker.x, attacker.y, `+${result.heal}`, 'heal');
-                    this.showQuote(attacker, 'skill');
                 } else if (result.type === 'summon') {
                     this.state.logs.push(`${attacker.name} 召唤 ${result.unit.name}`);
-                    this.showQuote(attacker, 'skill');
                 }
             }
             attacker.usedSkill = true;
