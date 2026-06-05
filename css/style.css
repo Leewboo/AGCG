@@ -649,6 +649,40 @@ html, body {
     transition: width 0.3s ease;
 }
 
+/* ---- 状态标记 ---- */
+.unit-status-bar {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1px;
+    z-index: 11;
+    max-width: 90%;
+}
+
+.unit-status {
+    font-size: 8px;
+    font-weight: 700;
+    color: #fff;
+    padding: 0 2px;
+    line-height: 10px;
+    min-width: 10px;
+    text-align: center;
+    border: 1px solid rgba(0,0,0,0.2);
+}
+
+.status-poison   { background: #5ca85c; }
+.status-stun     { background: #c8a040; }
+.status-slow     { background: #4080c0; }
+.status-burn     { background: #c06020; }
+.status-confuse  { background: #a040a0; }
+.status-shred    { background: #808080; }
+.status-silence  { background: #8040c0; }
+.status-weilin   { background: #c04040; }
+.status-buff-atk { background: #c0a040; }
+.status-buff-def { background: #40a0c0; }
+
 /* ============================================
    选中武将技能栏
    ============================================ */

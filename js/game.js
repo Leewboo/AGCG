@@ -564,14 +564,42 @@ const Game = {
     renderUnit(unit) {
         const hpPercent = (unit.hp / unit.maxHp * 100).toFixed(0);
         const isSelected = this.state.selectedUnit && this.state.selectedUnit.id === unit.id;
+        const statusTags = this.getStatusTags(unit);
         return `
             <div class="unit p${unit.player} ${isSelected ? 'selected' : ''}">
+                <div class="unit-status-bar">${statusTags}</div>
                 <div class="unit-icon">${unit.name}</div>
                 <div class="unit-hp">
                     <div class="unit-hp-fill" style="width: ${hpPercent}%"></div>
                 </div>
             </div>
         `;
+    },
+
+    getStatusTags(unit) {
+        const tags = [];
+        // debuffs
+        if (unit.debuffs) {
+            unit.debuffs.forEach(d => {
+                if (d.type === 'poison') tags.push({ cls: 'status-poison', text: '毒' });
+                if (d.type === 'stun') tags.push({ cls: 'status-stun', text: '晕' });
+                if (d.type === 'slow') tags.push({ cls: 'status-slow', text: '缓' });
+                if (d.type === 'burn') tags.push({ cls: 'status-burn', text: '燃' });
+                if (d.type === 'confuse') tags.push({ cls: 'status-confuse', text: '乱' });
+                if (d.type === 'shredDef') tags.push({ cls: 'status-shred', text: '破' });
+                if (d.type === 'silence') tags.push({ cls: 'status-silence', text: '默' });
+            });
+        }
+        // 威临减攻
+        if (unit._weiLinDebuffed) tags.push({ cls: 'status-weilin', text: '威' });
+        // buffs
+        if (unit.buffs) {
+            unit.buffs.forEach(b => {
+                if (b.stat === 'atk') tags.push({ cls: 'status-buff-atk', text: '攻' });
+                if (b.stat === 'def') tags.push({ cls: 'status-buff-def', text: '防' });
+            });
+        }
+        return tags.map(t => `<span class="unit-status ${t.cls}">${t.text}</span>`).join('');
     },
 
     // ================================
