@@ -704,6 +704,45 @@ const Game = {
             return;
         }
 
+        // 劫营技能 - 两步选择：选择目标空格移动
+        if (this.state.skillPhase === 'jieying_step1' && this.state.currentSkill) {
+            const skill = this.state.currentSkill;
+            const attacker = this.state.selectedUnit;
+
+            // 检查是否是空格且在范围内
+            const range = window.Range.parse(skill.range, attacker.x, attacker.y, null, window.TERRAIN);
+            const valid = range.find(p => p.x === x && p.y === y);
+            if (!valid || this.getUnit(x, y)) {
+                this.state.logs.push('无效的目标位置');
+                return;
+            }
+
+            // 执行劫营
+            if (skill.energyCost !== undefined) attacker.energy -= skill.energyCost;
+            const result = window.Effect.jieying(attacker, x, y, 40, this.state);
+
+            this.state.logs.push(`${attacker.name} 劫营！`);
+            result.targets.forEach(t => {
+                const tUnit = this.state.units.find(u => u.name === t.name && !u.dead);
+                if (tUnit) {
+                    if (t.type === 'dodge') this.showFloatingText(tUnit.x, tUnit.y, '闪避', 'dodge');
+                    else {
+                        this.showFloatingText(tUnit.x, tUnit.y, `-${t.damage}`, 'damage');
+                        this.addHitAnimation(tUnit);
+                        if (tUnit.dead) this.addDeathAnimation(tUnit);
+                    }
+                }
+                if (t.type === 'dodge') this.state.logs.push(`  ${t.name} 闪避`);
+                else this.state.logs.push(`  ${t.name} -${t.damage}`);
+            });
+
+            attacker.usedSkill = true;
+            this.cancelSkill();
+            this.checkWin();
+            this.renderBattle();
+            return;
+        }
+
         // 移动
         if (hlMove && this.state.selectedUnit) {
             const mover = this.state.selectedUnit;
@@ -722,7 +761,12 @@ const Game = {
         // 普通攻击
         if (hlAttack && this.state.selectedUnit && unit && unit.player !== this.state.selectedUnit.player) {
             const attacker = this.state.selectedUnit;
-            const result = window.Effect.damage(attacker, unit, attacker.atk);
+            let result;
+            if (attacker._passive_guanri) {
+                result = window.Effect.distanceDamage(attacker, unit, attacker.atk);
+            } else {
+                result = window.Effect.damage(attacker, unit, attacker.atk);
+            }
             this.addLungeAnimation(attacker, unit);
             let extraActionGranted = false;
             if (result.type === 'dodge') {
@@ -952,6 +996,20 @@ const Game = {
                 }
             });
             this.state.logs.push(`${u.name} 选择胆勇目标...`);
+            this.renderBattle();
+            return;
+        }
+
+        // 劫营技能：选择目标空格
+        if (skill.step1 === 'selectEmpty') {
+            this.state.skillPhase = 'jieying_step1';
+            const range = window.Range.parse(skill.range, u.x, u.y, null, window.TERRAIN);
+            range.forEach(p => {
+                if (!this.getUnit(p.x, p.y)) {
+                    this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
+                }
+            });
+            this.state.logs.push(`${u.name} 选择劫营目标位置...`);
             this.renderBattle();
             return;
         }

@@ -147,6 +147,40 @@ const GENERALS = [
         ]
     },
     {
+        id: 'huangzhong',
+        name: '黄忠',
+        hp: 130,
+        atk: 60,
+        def: 15,
+        mov: 2,
+        moveRange: ['x2', '+2'],
+        attackRange: 'r3',
+        skills: [
+            {
+                id: 'guanri',
+                name: '贯日',
+                type: 'passive',
+                category: 'special',
+                content(a, t, gs) {
+                    a._passive_guanri = true;
+                    return { type: 'passive' };
+                },
+                desc: '被动：普通攻击时，距离每增加1格，伤害+5'
+            },
+            {
+                id: 'jieying',
+                name: '劫营',
+                type: 'active',
+                category: 'special',
+                range: 'r3',
+                energyCost: 3,
+                chargeTrigger: 'afterAction',
+                step1: 'selectEmpty',
+                desc: '主动：选择r3范围内的空格，移动过去并对直线上的敌人造成40伤害（需要3点能量）'
+            }
+        ]
+    },
+    {
         id: 'debug1', name: '调试将甲', hp: 100, atk: 20, def: 10, mov: 3,
         moveRange: '+3', attackRange: '+1',
         skills: [
