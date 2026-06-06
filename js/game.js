@@ -318,7 +318,7 @@ const Game = {
         this.state.skillPhase = null;
         this.state.skillTarget = null;
         this.state.highlights = [];
-        this.state.logs = ['战斗开始'];
+        this.state.logs = ['战斗开始', '=== 第1回合开始 ===', '红方行动'];
         this.renderBattle();
         this.showScreen('battle');
     },
@@ -327,7 +327,7 @@ const Game = {
         const info = document.getElementById('turn-info');
         const board = document.getElementById('battle-board');
         const log = document.getElementById('log-panel');
-        if (info) info.textContent = `第${this.state.turn}回合 ${this.state.currentPlayer === 1 ? '红方' : '蓝方'}`;
+        if (info) info.textContent = `第${this.state.turn}回合 - ${this.state.currentPlayer === 1 ? '红方' : '蓝方'}行动`;
         if (board) {
             board.innerHTML = '';
             for (let y = 0; y < window.BOARD_SIZE; y++) {
@@ -716,14 +716,20 @@ const Game = {
         });
         this.state.selectedUnit = null;
         this.clearHighlights();
-        if (this.state.currentPlayer === 2) {
+        
+        // 一方操作完成，切换到另一方
+        if (this.state.currentPlayer === 1) {
+            // 红方操作完成，切换到蓝方
+            this.state.currentPlayer = 2;
+            this.state.logs.push('蓝方行动');
+        } else {
+            // 蓝方操作完成，回合+1，切换到红方（新回合开始）
             this.state.turn++;
             this.state.currentPlayer = 1;
-            this.state.logs.push(`第${this.state.turn}回合 红方`);
-        } else {
-            this.state.currentPlayer = 2;
-            this.state.logs.push('蓝方回合');
+            this.state.logs.push(`=== 第${this.state.turn}回合开始 ===`);
+            this.state.logs.push('红方行动');
         }
+        
         if (this.state.mode === 'pve' && this.state.currentPlayer === 2) {
             this.aiTurn();
         } else {
