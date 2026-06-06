@@ -16,7 +16,8 @@ const Game = {
         players: {
             1: { generals: [], deployed: [], toDeploy: null },
             2: { generals: [], deployed: [], toDeploy: null }
-        }
+        },
+        _modules: { Range: window.Range, Effect: window.Effect }
     },
 
     init() {
@@ -221,7 +222,7 @@ const Game = {
 
                 let cellHtml = '';
                 if (x === 0) cellHtml += `<span class="cell-label top-left">${y}</span>`;
-                if (y === BOARD_SIZE - 1) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
+                if (y === window.BOARD_SIZE - 1) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
                 if (terrainLabel) cellHtml += `<span class="terrain-label" style="font-size:24px;opacity:0.7">${terrainLabel}</span>`;
                 if (unit) cellHtml += this.renderUnit(unit);
                 cell.innerHTML = cellHtml;
@@ -252,7 +253,7 @@ const Game = {
 
     handleDeployClick(x, y) {
         const player = this.state.currentPlayer;
-        if (player === 1 && y < BOARD_SIZE - 3) return;
+        if (player === 1 && y < window.BOARD_SIZE - 3) return;
         if (player === 2 && y > 2) return;
         if (this.getUnit(x, y)) return;
 
@@ -344,7 +345,7 @@ const Game = {
         this.state.units.forEach(u => {
             if (u.skills) {
                 u.skills.filter(s => s.type === 'passive').forEach(s => {
-                    if (s.content) s.content(u, this.state);
+                    if (s.content) s.content(u, null, this.state);
                 });
             }
         });
@@ -387,7 +388,7 @@ const Game = {
 
                     let cellHtml = '';
                     if (x === 0) cellHtml += `<span class="cell-label top-left">${y}</span>`;
-                    if (y === BOARD_SIZE - 1) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
+                    if (y === window.BOARD_SIZE - 1) cellHtml += `<span class="cell-label bottom-left">${x}</span>`;
                     if (terrainLabel) cellHtml += `<span class="terrain-label" style="font-size:24px;opacity:0.7">${terrainLabel}</span>`;
                     if (unit) cellHtml += this.renderUnit(unit);
                     cell.innerHTML = cellHtml;
@@ -886,7 +887,7 @@ const Game = {
                     this.state.skillPhase = 'step2';
                     this.state.highlights = [];
                     // 显示目标周围的可选落点
-                    const landingRange = window.Range.parse(skill.step2Range || 'r2', unit.x, unit.y, null, TERRAIN);
+                    const landingRange = window.Range.parse(skill.step2Range || 'r2', unit.x, unit.y, null, window.TERRAIN);
                     landingRange.forEach(p => {
                         if (!this.getUnit(p.x, p.y)) {
                             this.state.highlights.push({ x: p.x, y: p.y, type: 'skill' });
@@ -1205,7 +1206,8 @@ const Game = {
             players: {
                 1: { generals: [], deployed: [], toDeploy: null },
                 2: { generals: [], deployed: [], toDeploy: null }
-            }
+            },
+            _modules: { Range: window.Range, Effect: window.Effect }
         };
         this.showScreen('menu');
     },
