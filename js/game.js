@@ -632,8 +632,8 @@ const Game = {
                 if (d.type === 'silence') tags.push({ cls: 'status-silence', text: '默' });
             });
         }
-        // 威临减攻
-        if (unit._weiLinDebuffed) tags.push({ cls: 'status-weilin', text: '威' });
+        // 光环减攻标记（通用）
+        if (unit._auraDebuff) tags.push({ cls: 'status-weilin', text: '光' });
         // buffs
         if (unit.buffs) {
             unit.buffs.forEach(b => {
@@ -642,6 +642,123 @@ const Game = {
             });
         }
         return tags.map(t => `<span class="unit-status ${t.cls}">${t.text}</span>`).join('');
+    },
+
+    // ================================
+    // 通用技能结果处理
+    // ================================
+    processSkillResult(attacker, target, result, skillName) {
+        let extraAction = false;
+
+        // 处理单个结果或组合结果
+        const results = result.type === 'combine' ? result.results : [result];
+        
+        results.forEach(res => {
+            if (!res) return;
+
+            // 伤害相关
+            if (res.damage !== undefined && res.type !== 'dodge') {
+                if (target && !target.dead) {
+                    this.addHitAnimation(target);
+                    const condText = res.conditionMet ? '（条件满足）' : '';
+                    if (target.dead) {
+                        this.state.logs.push(`${attacker.name} ${skillName} 击杀 ${target.name}${condText}`);
+                        this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
+                        this.addDeathAnimation(target);
+                        // 触发击杀事件
+                        const hookResult = window.Effect.trigger(attacker, 'onKill', target, this.state);
+                        if (hookResult.results.some(r => r && r.extraAction)) {
+                            extraAction = true;
+                        }
+                    } else {
+                        this.state.logs.push(`${attacker.name} ${skillName} ${target.name} -${res.damage}${condText}`);
+                        this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
+                    }
+                }
+            } else if (res.type === 'dodge') {
+                if (target) {
+                    this.state.logs.push(`${target.name} 闪避了攻击！`);
+                    this.showFloatingText(target.x, target.y, '闪避', 'dodge');
+                }
+            }
+
+            // 反击
+            if (res.counter) {
+                this.state.logs.push(`${target.name} 反击 -${res.counter}`);
+                this.showFloatingText(attacker.x, attacker.y, `反击-${res.counter}`, 'counter');
+                this.addHitAnimation(attacker);
+            }
+
+            // 治疗
+            if (res.heal) {
+                this.state.logs.push(`${attacker.name} ${skillName} 治疗${res.heal}`);
+                this.showFloatingText(attacker.x, attacker.y, `+${res.heal}`, 'heal');
+            }
+
+            // 状态效果
+            if (res.type === 'poison') {
+                this.state.logs.push(`${attacker.name} 使 ${target.name} 中毒`);
+                this.showFloatingText(target.x, target.y, '中毒', 'damage');
+            } else if (res.type === 'stun') {
+                this.state.logs.push(`${attacker.name} 眩晕 ${target.name}`);
+                this.showFloatingText(target.x, target.y, '眩晕', 'damage');
+            } else if (res.type === 'slow') {
+                this.state.logs.push(`${attacker.name} 减速 ${target.name}`);
+                this.showFloatingText(target.x, target.y, '减速', 'damage');
+            } else if (res.type === 'burn') {
+                this.state.logs.push(`${attacker.name} 使 ${target.name} 燃烧`);
+                this.showFloatingText(target.x, target.y, '燃烧', 'damage');
+            } else if (res.type === 'confuse') {
+                this.state.logs.push(`${attacker.name} 使 ${target.name} 混乱`);
+                this.showFloatingText(target.x, target.y, '混乱', 'damage');
+            } else if (res.type === 'shredDef') {
+                this.state.logs.push(`${attacker.name} 破甲 ${target.name}`);
+                this.showFloatingText(target.x, target.y, '破甲', 'damage');
+            } else if (res.type === 'summon') {
+                this.state.logs.push(`${attacker.name} 召唤 ${res.unit.name}`);
+            }
+
+            // AOE/穿透/多重射击
+            if (res.type === 'aoe' || res.type === 'pierce' || res.type === 'multishot' || res.type === 'cone') {
+                const typeText = res.type === 'aoe' ? 'AOE伤害' : res.type === 'pierce' ? '穿透攻击' : res.type === 'multishot' ? `射击${res.hits}次` : '扇形攻击';
+                this.state.logs.push(`${attacker.name} ${skillName} ${typeText}`);
+                if (res.targets) {
+                    res.targets.forEach(t => {
+                        const tUnit = this.state.units.find(u => u.name === t.name && !u.dead);
+                        if (tUnit) {
+                            if (t.type === 'dodge') this.showFloatingText(tUnit.x, tUnit.y, '闪避', 'dodge');
+                            else {
+                                this.showFloatingText(tUnit.x, tUnit.y, `-${t.damage}`, 'damage');
+                                this.addHitAnimation(tUnit);
+                                if (tUnit.dead) {
+                                    this.addDeathAnimation(tUnit);
+                                    // 触发击杀事件
+                                    const hookResult = window.Effect.trigger(attacker, 'onKill', tUnit, this.state);
+                                    if (hookResult.results.some(r => r && r.extraAction)) {
+                                        extraAction = true;
+                                    }
+                                }
+                            }
+                        }
+                        if (t.type === 'dodge') this.state.logs.push(`  ${t.name} 闪避`);
+                        else this.state.logs.push(`  ${t.name} -${t.damage}`);
+                    });
+                }
+                if (res.type === 'multishot' && target) {
+                    this.addHitAnimation(target);
+                    this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
+                    if (target.dead) {
+                        this.addDeathAnimation(target);
+                        const hookResult = window.Effect.trigger(attacker, 'onKill', target, this.state);
+                        if (hookResult.results.some(r => r && r.extraAction)) {
+                            extraAction = true;
+                        }
+                    }
+                }
+            }
+        });
+
+        return extraAction;
     },
 
     // ================================
@@ -676,25 +793,11 @@ const Game = {
             if (skill.energyCost !== undefined) attacker.energy -= skill.energyCost;
             const result = skill.content(attacker, target, this.state, { x, y });
 
-            // 显示效果
-            let extraActionGranted = false;
-            this.addHitAnimation(target);
-            if (target.dead) {
-                this.state.logs.push(`${attacker.name} 胆勇击杀 ${target.name}`);
-                this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
-                this.addDeathAnimation(target);
-                if (attacker._passive_changSheng && target.generalId) {
-                    extraActionGranted = true;
-                }
-            } else {
-                this.state.logs.push(`${attacker.name} 胆勇 ${target.name} -${result.damage}`);
-                this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
-            }
+            // 通用效果处理
+            const extraActionGranted = this.processSkillResult(attacker, target, result, skill.name);
 
             if (extraActionGranted) {
                 window.Effect.grantExtraAction(attacker);
-                this.state.logs.push(`${attacker.name} 常胜！获得额外行动`);
-                this.showFloatingText(attacker.x, attacker.y, '常胜！', 'heal');
             } else {
                 attacker.usedSkill = true;
             }
@@ -724,36 +827,11 @@ const Game = {
             const attacker = this.state.selectedUnit;
             const result = window.Effect.damage(attacker, unit, attacker.atk);
             this.addLungeAnimation(attacker, unit);
-            let extraActionGranted = false;
-            if (result.type === 'dodge') {
-                this.state.logs.push(`${unit.name} 闪避了攻击！`);
-                this.showFloatingText(unit.x, unit.y, '闪避', 'dodge');
-            } else {
-                this.addHitAnimation(unit);
-                this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
-                if (unit.dead) {
-                    this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
-                    this.addDeathAnimation(unit);
-                    // 常胜被动
-                    if (attacker._passive_changSheng && unit.generalId) {
-                        extraActionGranted = true;
-                    }
-                } else {
-                    this.state.logs.push(`${attacker.name} 攻击 ${unit.name} -${result.damage}`);
-                }
-            }
-            if (result.counter) {
-                this.state.logs.push(`${unit.name} 反击 -${result.counter}`);
-                this.showFloatingText(attacker.x, attacker.y, `反击-${result.counter}`, 'counter');
-                this.addHitAnimation(attacker);
-            }
+            const extraActionGranted = this.processSkillResult(attacker, unit, result, '攻击');
             if (extraActionGranted) {
                 window.Effect.grantExtraAction(attacker);
-                this.state.logs.push(`${attacker.name} 常胜！获得额外行动`);
-                this.showFloatingText(attacker.x, attacker.y, '常胜！', 'heal');
             } else {
                 attacker.attacked = true;
-                // 技能级充能：afterAttack / afterAction
                 this.triggerSkillCharge(attacker, 'afterAttack');
                 this.triggerSkillCharge(attacker, 'afterAction');
             }
@@ -791,125 +869,18 @@ const Game = {
             if (skill.energyCost !== undefined) attacker.energy -= skill.energyCost;
             if (skill.category === 'summon') {
                 if (!this.getUnit(x, y)) {
-                    skill.content(attacker, { x, y }, this.state);
-                    this.state.logs.push(`${attacker.name} 召唤 ${window.SUMMONS[skill.summon].name}`);
+                    const result = skill.content(attacker, { x, y }, this.state);
+                    this.processSkillResult(attacker, null, result, skill.name);
                 }
             } else if (unit && unit.player !== attacker.player) {
                 const result = skill.content(attacker, unit, this.state);
-                if (result.type === 'aoe') {
-                    this.state.logs.push(`${attacker.name} ${skill.name} AOE伤害`);
-                    result.targets.forEach(t => {
-                        const tUnit = this.state.units.find(u => u.name === t.name && !u.dead);
-                        if (tUnit) {
-                            if (t.type === 'dodge') this.showFloatingText(tUnit.x, tUnit.y, '闪避', 'dodge');
-                            else {
-                                this.showFloatingText(tUnit.x, tUnit.y, `-${t.damage}`, 'damage');
-                                this.addHitAnimation(tUnit);
-                                if (tUnit.dead) this.addDeathAnimation(tUnit);
-                            }
-                        }
-                        if (t.type === 'dodge') this.state.logs.push(`  ${t.name} 闪避`);
-                        else this.state.logs.push(`  ${t.name} -${t.damage}`);
-                    });
-                } else if (result.type === 'pierce') {
-                    this.state.logs.push(`${attacker.name} ${skill.name} 穿透攻击`);
-                    result.targets.forEach(t => {
-                        const tUnit = this.state.units.find(u => u.name === t.name && !u.dead);
-                        if (tUnit) {
-                            if (t.type === 'dodge') this.showFloatingText(tUnit.x, tUnit.y, '闪避', 'dodge');
-                            else {
-                                this.showFloatingText(tUnit.x, tUnit.y, `-${t.damage}`, 'damage');
-                                this.addHitAnimation(tUnit);
-                                if (tUnit.dead) this.addDeathAnimation(tUnit);
-                            }
-                        }
-                        if (t.type === 'dodge') this.state.logs.push(`  ${t.name} 闪避`);
-                        else this.state.logs.push(`  ${t.name} -${t.damage}`);
-                    });
-                } else if (result.type === 'multishot') {
-                    this.addHitAnimation(unit);
-                    this.state.logs.push(`${attacker.name} ${skill.name} 射击${result.hits}次，总计${result.damage}伤害`);
-                    this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
-                    if (unit.dead) this.addDeathAnimation(unit);
-                } else if (result.type === 'cone') {
-                    this.state.logs.push(`${attacker.name} ${skill.name} 扇形攻击`);
-                    result.targets.forEach(t => {
-                        const tUnit = this.state.units.find(u => u.name === t.name && !u.dead);
-                        if (tUnit) {
-                            if (t.type === 'dodge') this.showFloatingText(tUnit.x, tUnit.y, '闪避', 'dodge');
-                            else {
-                                this.showFloatingText(tUnit.x, tUnit.y, `-${t.damage}`, 'damage');
-                                this.addHitAnimation(tUnit);
-                                if (tUnit.dead) this.addDeathAnimation(tUnit);
-                            }
-                        }
-                        if (t.type === 'dodge') this.state.logs.push(`  ${t.name} -${t.damage}`);
-                    });
-                } else if (result.type === 'damage') {
-                    this.addHitAnimation(unit);
-                    let extraActionGranted = false;
-                    if (unit.dead) {
-                        this.state.logs.push(`${attacker.name} 击杀 ${unit.name}`);
-                        this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
-                        this.addDeathAnimation(unit);
-                        if (attacker._passive_changSheng && unit.generalId) {
-                            extraActionGranted = true;
-                        }
-                    } else {
-                        this.state.logs.push(`${attacker.name} ${skill.name} ${unit.name} -${result.damage}`);
-                        this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
-                    }
-                    if (extraActionGranted) {
-                        window.Effect.grantExtraAction(attacker);
-                        this.state.logs.push(`${attacker.name} 常胜！获得额外行动`);
-                        this.showFloatingText(attacker.x, attacker.y, '常胜！', 'heal');
-                    } else {
-                        attacker.usedSkill = true;
-                    }
-                    this.cancelSkill();
-                    this.checkWin();
-                    this.renderBattle();
-                    return;
-                } else if (result.type === 'poison') {
-                    this.state.logs.push(`${attacker.name} 使 ${unit.name} 中毒`);
-                    this.showFloatingText(unit.x, unit.y, '中毒', 'damage');
-                } else if (result.type === 'stun') {
-                    this.state.logs.push(`${attacker.name} 眩晕 ${unit.name}`);
-                    this.showFloatingText(unit.x, unit.y, '眩晕', 'damage');
-                } else if (result.type === 'slow') {
-                    this.state.logs.push(`${attacker.name} 减速 ${unit.name}`);
-                    this.showFloatingText(unit.x, unit.y, '减速', 'damage');
-                } else if (result.type === 'burn') {
-                    this.state.logs.push(`${attacker.name} 使 ${unit.name} 燃烧`);
-                    this.showFloatingText(unit.x, unit.y, '燃烧', 'damage');
-                } else if (result.type === 'confuse') {
-                    this.state.logs.push(`${attacker.name} 使 ${unit.name} 混乱`);
-                    this.showFloatingText(unit.x, unit.y, '混乱', 'damage');
-                } else if (result.type === 'shredDef') {
-                    this.state.logs.push(`${attacker.name} 破甲 ${unit.name}`);
-                    this.showFloatingText(unit.x, unit.y, '破甲', 'damage');
-                } else if (result.type === 'shuiYan') {
-                    this.addHitAnimation(unit);
-                    const riverText = result.riverBonus ? '（河流翻倍）' : '';
-                    if (unit.dead) {
-                        this.state.logs.push(`${attacker.name} 水淹击杀 ${unit.name}${riverText}`);
-                        this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
-                        this.addDeathAnimation(unit);
-                    } else {
-                        this.state.logs.push(`${attacker.name} 水淹 ${unit.name} -${result.damage}${riverText}`);
-                        this.showFloatingText(unit.x, unit.y, `-${result.damage}`, 'damage');
-                    }
-                    if (result.slow) {
-                        this.showFloatingText(unit.x, unit.y, '减速', 'damage');
-                    }
-                } else if (result.heal) {
-                    this.state.logs.push(`${attacker.name} ${skill.name} 治疗${result.heal}`);
-                    this.showFloatingText(attacker.x, attacker.y, `+${result.heal}`, 'heal');
-                } else if (result.type === 'summon') {
-                    this.state.logs.push(`${attacker.name} 召唤 ${result.unit.name}`);
+                const extraActionGranted = this.processSkillResult(attacker, unit, result, skill.name);
+                if (extraActionGranted) {
+                    window.Effect.grantExtraAction(attacker);
+                } else {
+                    attacker.usedSkill = true;
                 }
             }
-            attacker.usedSkill = true;
             this.cancelSkill();
             this.checkWin();
             this.renderBattle();
@@ -1077,32 +1048,15 @@ const Game = {
             }
         });
 
-        // 关羽【威临】光环扫描：+2范围减攻，+1范围沉默
-        this.state.units.forEach(u => {
-            if (u._passive_weiLin && !u.dead) {
-                const auraRange2 = window.Range.parse('+2', u.x, u.y, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
-                const auraRange1 = window.Range.parse('+1', u.x, u.y, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
-                this.state.units.forEach(enemy => {
-                    if (enemy.dead || enemy.player === u.player) return;
-                    // +2范围减攻10
-                    const inRange2 = auraRange2.find(p => p.x === enemy.x && p.y === enemy.y);
-                    if (inRange2 && !enemy._weiLinDebuffed) {
-                        enemy.atk = Math.max(1, enemy.atk - 10);
-                        enemy._weiLinDebuffed = true;
-                    } else if (!inRange2 && enemy._weiLinDebuffed) {
-                        enemy.atk += 10;
-                        enemy._weiLinDebuffed = false;
-                    }
-                    // +1范围沉默
-                    const inRange1 = auraRange1.find(p => p.x === enemy.x && p.y === enemy.y);
-                    if (inRange1 && !enemy.silenced) {
-                        window.Effect.silence(u, enemy, 1);
-                    }
-                });
-            }
-        });
         this.state.selectedUnit = null;
         this.cancelSkill();
+
+        // 触发回合开始事件
+        this.state.units.forEach(u => {
+            if (!u.dead) {
+                window.Effect.trigger(u, 'onTurnStart', this.state);
+            }
+        });
 
         if (this.state.currentPlayer === 2) {
             this.state.turn++;

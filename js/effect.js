@@ -19,7 +19,7 @@ const Effect = {
             if (attacker.hp <= 0) { attacker.hp = 0; attacker.dead = true; }
             counter = counterDmg;
         }
-        return { damage: realDamage, type: 'damage', counter };
+        return { damage: realDamage, type: 'damage', counter, targetDead: target.dead };
     },
     heal(healer, target, amount) {
         const healAmount = Math.min(amount, target.maxHp - target.hp);
@@ -197,6 +197,69 @@ const Effect = {
         unit.x = x;
         unit.y = y;
         return { type: 'moveTo', x, y };
+    },
+
+    // 条件伤害：检查地形条件，满足则伤害翻倍
+    conditionalDamage(attacker, target, damage, condition, gameState) {
+        let multiplier = 1;
+        let conditionMet = false;
+        if (condition === 'river') {
+            conditionMet = TERRAIN[target.y] && TERRAIN[target.y][target.x] === 2;
+        }
+        if (conditionMet) multiplier = 2;
+        const result = this.damage(attacker, target, damage * multiplier);
+        return { ...result, conditionMet, multiplier, type: 'conditionalDamage' };
+    },
+
+    // 光环效果：持续影响范围内的敌人
+    aura(attacker, range, effectFn, gameState) {
+        const auraRange = Range.parse(range, attacker.x, attacker.y, BLOCKING_TERRAIN_ATTACK, TERRAIN);
+        gameState.units.forEach(enemy => {
+            if (enemy.dead || enemy.player === attacker.player) return;
+            const inRange = auraRange.find(p => p.x === enemy.x && p.y === enemy.y);
+            effectFn(enemy, inRange);
+        });
+        return { type: 'aura' };
+    },
+
+    // 组合效果：同时执行多个效果
+    combine(attacker, target, gameState, ...effects) {
+        const results = [];
+        effects.forEach(effect => {
+            if (effect.fn) {
+                const result = effect.fn.apply(this, [attacker, target, ...(effect.args || []), gameState]);
+                results.push(result);
+            }
+        });
+        return { type: 'combine', results };
+    },
+
+    // 注册/触发事件回调
+    eventHooks: {},
+    
+    on(unit, eventName, callback) {
+        if (!this.eventHooks[unit.id]) this.eventHooks[unit.id] = {};
+        if (!this.eventHooks[unit.id][eventName]) this.eventHooks[unit.id][eventName] = [];
+        this.eventHooks[unit.id][eventName].push(callback);
+        return { type: 'hookRegistered' };
+    },
+
+    trigger(unit, eventName, ...args) {
+        const results = [];
+        if (this.eventHooks[unit.id] && this.eventHooks[unit.id][eventName]) {
+            this.eventHooks[unit.id][eventName].forEach(callback => {
+                results.push(callback(...args));
+            });
+        }
+        return { type: 'triggered', results };
+    },
+
+    // 清空事件钩子
+    clearHooks(unit) {
+        if (unit && this.eventHooks[unit.id]) {
+            delete this.eventHooks[unit.id];
+        }
+        return { type: 'hooksCleared' };
     }
 };
 
