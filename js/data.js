@@ -75,8 +75,6 @@ const GENERALS = [
                 category: 'special',
                 content(a, t, gs) {
                     const { Effect } = gs._modules;
-                    // 标记用于兼容旧代码
-                    a._passive_changSheng = true;
                     // 使用事件钩子实现常胜被动
                     Effect.on(a, 'onKill', (target, gameState) => {
                         if (target.generalId) {
