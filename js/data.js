@@ -78,9 +78,7 @@ const GENERALS = [
                     const { Effect } = gs._modules;
                     Effect.on(a, 'onKill', (target, gameState) => {
                         if (target.generalId) {
-                            Game.showFloatingText(a.x, a.y, '常胜！', 'heal');
-                            Game.state.logs.push(`${a.name} 常胜！获得额外行动`);
-                            return { extraAction: true };
+                            return { extraAction: true, showText: '常胜！', logText: `${a.name} 常胜！获得额外行动` };
                         }
                     });
                     return { type: 'passive' };

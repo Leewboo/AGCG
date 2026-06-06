@@ -204,7 +204,7 @@ const Effect = {
         let multiplier = 1;
         let conditionMet = false;
         if (condition === 'river') {
-            conditionMet = TERRAIN[target.y] && TERRAIN[target.y][target.x] === 2;
+            conditionMet = window.TERRAIN[target.y] && window.TERRAIN[target.y][target.x] === 2;
         }
         if (conditionMet) multiplier = 2;
         const result = this.damage(attacker, target, damage * multiplier);
@@ -213,7 +213,7 @@ const Effect = {
 
     // 光环效果：持续影响范围内的敌人
     aura(attacker, range, effectFn, gameState) {
-        const auraRange = Range.parse(range, attacker.x, attacker.y, BLOCKING_TERRAIN_ATTACK, TERRAIN);
+        const auraRange = window.Range.parse(range, attacker.x, attacker.y, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
         gameState.units.forEach(enemy => {
             if (enemy.dead || enemy.player === attacker.player) return;
             const inRange = auraRange.find(p => p.x === enemy.x && p.y === enemy.y);

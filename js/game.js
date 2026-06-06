@@ -667,9 +667,13 @@ const Game = {
                         this.addDeathAnimation(target);
                         // 触发击杀事件
                         const hookResult = window.Effect.trigger(attacker, 'onKill', target, this.state);
-                        if (hookResult.results.some(r => r && r.extraAction)) {
-                            extraAction = true;
-                        }
+                        hookResult.results.forEach(r => {
+                            if (r) {
+                                if (r.extraAction) extraAction = true;
+                                if (r.showText) this.showFloatingText(attacker.x, attacker.y, r.showText, 'heal');
+                                if (r.logText) this.state.logs.push(r.logText);
+                            }
+                        });
                     } else {
                         this.state.logs.push(`${attacker.name} ${skillName} ${target.name} -${res.damage}${condText}`);
                         this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
@@ -719,43 +723,51 @@ const Game = {
             }
 
             // AOE/穿透/多重射击
-            if (res.type === 'aoe' || res.type === 'pierce' || res.type === 'multishot' || res.type === 'cone') {
-                const typeText = res.type === 'aoe' ? 'AOE伤害' : res.type === 'pierce' ? '穿透攻击' : res.type === 'multishot' ? `射击${res.hits}次` : '扇形攻击';
-                this.state.logs.push(`${attacker.name} ${skillName} ${typeText}`);
-                if (res.targets) {
-                    res.targets.forEach(t => {
-                        const tUnit = this.state.units.find(u => u.name === t.name && !u.dead);
-                        if (tUnit) {
-                            if (t.type === 'dodge') this.showFloatingText(tUnit.x, tUnit.y, '闪避', 'dodge');
-                            else {
-                                this.showFloatingText(tUnit.x, tUnit.y, `-${t.damage}`, 'damage');
-                                this.addHitAnimation(tUnit);
-                                if (tUnit.dead) {
-                                    this.addDeathAnimation(tUnit);
-                                    // 触发击杀事件
-                                    const hookResult = window.Effect.trigger(attacker, 'onKill', tUnit, this.state);
-                                    if (hookResult.results.some(r => r && r.extraAction)) {
-                                        extraAction = true;
+        if (res.type === 'aoe' || res.type === 'pierce' || res.type === 'multishot' || res.type === 'cone') {
+            const typeText = res.type === 'aoe' ? 'AOE伤害' : res.type === 'pierce' ? '穿透攻击' : res.type === 'multishot' ? `射击${res.hits}次` : '扇形攻击';
+            this.state.logs.push(`${attacker.name} ${skillName} ${typeText}`);
+            if (res.targets) {
+                res.targets.forEach(t => {
+                    const tUnit = this.state.units.find(u => u.name === t.name && !u.dead);
+                    if (tUnit) {
+                        if (t.type === 'dodge') this.showFloatingText(tUnit.x, tUnit.y, '闪避', 'dodge');
+                        else {
+                            this.showFloatingText(tUnit.x, tUnit.y, `-${t.damage}`, 'damage');
+                            this.addHitAnimation(tUnit);
+                            if (tUnit.dead) {
+                                this.addDeathAnimation(tUnit);
+                                // 触发击杀事件
+                                const hookResult = window.Effect.trigger(attacker, 'onKill', tUnit, this.state);
+                                hookResult.results.forEach(r => {
+                                    if (r) {
+                                        if (r.extraAction) extraAction = true;
+                                        if (r.showText) this.showFloatingText(attacker.x, attacker.y, r.showText, 'heal');
+                                        if (r.logText) this.state.logs.push(r.logText);
                                     }
-                                }
+                                });
                             }
                         }
-                        if (t.type === 'dodge') this.state.logs.push(`  ${t.name} 闪避`);
-                        else this.state.logs.push(`  ${t.name} -${t.damage}`);
+                    }
+                    if (t.type === 'dodge') this.state.logs.push(`  ${t.name} 闪避`);
+                    else this.state.logs.push(`  ${t.name} -${t.damage}`);
+                });
+            }
+            if (res.type === 'multishot' && target) {
+                this.addHitAnimation(target);
+                this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
+                if (target.dead) {
+                    this.addDeathAnimation(target);
+                    const hookResult = window.Effect.trigger(attacker, 'onKill', target, this.state);
+                    hookResult.results.forEach(r => {
+                        if (r) {
+                            if (r.extraAction) extraAction = true;
+                            if (r.showText) this.showFloatingText(attacker.x, attacker.y, r.showText, 'heal');
+                            if (r.logText) this.state.logs.push(r.logText);
+                        }
                     });
                 }
-                if (res.type === 'multishot' && target) {
-                    this.addHitAnimation(target);
-                    this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
-                    if (target.dead) {
-                        this.addDeathAnimation(target);
-                        const hookResult = window.Effect.trigger(attacker, 'onKill', target, this.state);
-                        if (hookResult.results.some(r => r && r.extraAction)) {
-                            extraAction = true;
-                        }
-                    }
-                }
             }
+        }
         });
 
         return extraAction;
