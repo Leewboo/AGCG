@@ -659,7 +659,7 @@ const Game = {
 
             // 伤害相关
             if (res.damage !== undefined && res.type !== 'dodge') {
-                if (target && !target.dead) {
+                if (target) {
                     this.addHitAnimation(target);
                     const condText = res.conditionMet ? '（条件满足）' : '';
                     if (target.dead) {
@@ -756,13 +756,13 @@ const Game = {
                 this.state.logs.push(`${attacker.name} ${skillName} ${typeText}`);
                 if (res.targets) {
                     res.targets.forEach(t => {
-                        const tUnit = this.state.units.find(u => u.name === t.name && !u.dead);
+                        const tUnit = this.state.units.find(u => u.name === t.name);
                         if (tUnit) {
                             if (t.type === 'dodge') this.showFloatingText(tUnit.x, tUnit.y, '闪避', 'dodge');
                             else {
                                 this.showFloatingText(tUnit.x, tUnit.y, `-${t.damage}`, 'damage');
                                 this.addHitAnimation(tUnit);
-                                if (tUnit.dead) {
+                                if (t.targetDead || tUnit.dead) {
                                     this.addDeathAnimation(tUnit);
                                     // 触发 onKill 事件钩子
                                     const killResult = window.Effect.trigger(attacker, 'onKill', tUnit, this.state);
