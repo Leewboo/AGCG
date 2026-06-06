@@ -665,9 +665,17 @@ const Game = {
                         this.state.logs.push(`${attacker.name} ${skillName} 击杀 ${target.name}${condText}`);
                         this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
                         this.addDeathAnimation(target);
-                        // 常胜被动
-                        if (attacker._passive_changSheng && target.generalId) {
+                        // 触发 onKill 事件钩子
+                        const killResult = window.Effect.trigger(attacker, 'onKill', target, this.state);
+                        if (killResult.results.some(r => r && r.extraAction)) {
                             extraAction = true;
+                            // 显示钩子返回的文字
+                            killResult.results.forEach(r => {
+                                if (r) {
+                                    if (r.showText) this.showFloatingText(attacker.x, attacker.y, r.showText, 'heal');
+                                    if (r.logText) this.state.logs.push(r.logText);
+                                }
+                            });
                         }
                     } else {
                         this.state.logs.push(`${attacker.name} ${skillName} ${target.name} -${res.damage}${condText}`);
@@ -733,9 +741,6 @@ const Game = {
                     this.state.logs.push(`${attacker.name} 胆勇击杀 ${target.name}`);
                     this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
                     this.addDeathAnimation(target);
-                    if (attacker._passive_changSheng && target.generalId) {
-                        extraAction = true;
-                    }
                 } else {
                     this.state.logs.push(`${attacker.name} 胆勇 ${target.name} -${res.damage}`);
                     this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
@@ -745,41 +750,45 @@ const Game = {
             }
 
             // AOE/穿透/多重射击
-        if (res.type === 'aoe' || res.type === 'pierce' || res.type === 'multishot' || res.type === 'cone') {
-            const typeText = res.type === 'aoe' ? 'AOE伤害' : res.type === 'pierce' ? '穿透攻击' : res.type === 'multishot' ? `射击${res.hits}次` : '扇形攻击';
-            this.state.logs.push(`${attacker.name} ${skillName} ${typeText}`);
-            if (res.targets) {
-                res.targets.forEach(t => {
-                    const tUnit = this.state.units.find(u => u.name === t.name && !u.dead);
-                    if (tUnit) {
-                        if (t.type === 'dodge') this.showFloatingText(tUnit.x, tUnit.y, '闪避', 'dodge');
-                        else {
-                            this.showFloatingText(tUnit.x, tUnit.y, `-${t.damage}`, 'damage');
-                            this.addHitAnimation(tUnit);
-                            if (tUnit.dead) {
-                                this.addDeathAnimation(tUnit);
-                                // 常胜被动
-                                if (attacker._passive_changSheng && tUnit.generalId) {
-                                    extraAction = true;
+            if (res.type === 'aoe' || res.type === 'pierce' || res.type === 'multishot' || res.type === 'cone') {
+                const typeText = res.type === 'aoe' ? 'AOE伤害' : res.type === 'pierce' ? '穿透攻击' : res.type === 'multishot' ? `射击${res.hits}次` : '扇形攻击';
+                this.state.logs.push(`${attacker.name} ${skillName} ${typeText}`);
+                if (res.targets) {
+                    res.targets.forEach(t => {
+                        const tUnit = this.state.units.find(u => u.name === t.name && !u.dead);
+                        if (tUnit) {
+                            if (t.type === 'dodge') this.showFloatingText(tUnit.x, tUnit.y, '闪避', 'dodge');
+                            else {
+                                this.showFloatingText(tUnit.x, tUnit.y, `-${t.damage}`, 'damage');
+                                this.addHitAnimation(tUnit);
+                                if (tUnit.dead) {
+                                    this.addDeathAnimation(tUnit);
+                                    // 触发 onKill 事件钩子
+                                    const killResult = window.Effect.trigger(attacker, 'onKill', tUnit, this.state);
+                                    if (killResult.results.some(r => r && r.extraAction)) {
+                                        extraAction = true;
+                                        killResult.results.forEach(r => {
+                                            if (r) {
+                                                if (r.showText) this.showFloatingText(attacker.x, attacker.y, r.showText, 'heal');
+                                                if (r.logText) this.state.logs.push(r.logText);
+                                            }
+                                        });
+                                    }
                                 }
                             }
                         }
-                    }
-                    if (t.type === 'dodge') this.state.logs.push(`  ${t.name} 闪避`);
-                    else this.state.logs.push(`  ${t.name} -${t.damage}`);
-                });
-            }
-            if (res.type === 'multishot' && target) {
-                this.addHitAnimation(target);
-                this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
-                if (target.dead) {
-                    this.addDeathAnimation(target);
-                    if (attacker._passive_changSheng && target.generalId) {
-                        extraAction = true;
+                        if (t.type === 'dodge') this.state.logs.push(`  ${t.name} 闪避`);
+                        else this.state.logs.push(`  ${t.name} -${t.damage}`);
+                    });
+                }
+                if (res.type === 'multishot' && target) {
+                    this.addHitAnimation(target);
+                    this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
+                    if (target.dead) {
+                        this.addDeathAnimation(target);
                     }
                 }
             }
-        }
         });
 
         return extraAction;
@@ -1075,7 +1084,14 @@ const Game = {
         this.state.selectedUnit = null;
         this.cancelSkill();
 
-        // 关羽【威临】光环扫描：+2范围减攻，+1范围沉默
+        // 触发回合开始事件钩子
+        this.state.units.forEach(u => {
+            if (!u.dead) {
+                window.Effect.trigger(u, 'onTurnStart', this.state);
+            }
+        });
+
+        // 关羽【威临】光环扫描（兼容旧代码）
         this.state.units.forEach(u => {
             if (u._passive_weiLin && !u.dead) {
                 const auraRange2 = window.Range.parse('+2', u.x, u.y, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
