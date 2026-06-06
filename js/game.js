@@ -632,8 +632,8 @@ const Game = {
                 if (d.type === 'silence') tags.push({ cls: 'status-silence', text: '默' });
             });
         }
-        // 光环减攻标记（通用）
-        if (unit._auraDebuff) tags.push({ cls: 'status-weilin', text: '光' });
+        // 威临减攻
+        if (unit._weiLinDebuffed) tags.push({ cls: 'status-weilin', text: '威' });
         // buffs
         if (unit.buffs) {
             unit.buffs.forEach(b => {
@@ -665,15 +665,10 @@ const Game = {
                         this.state.logs.push(`${attacker.name} ${skillName} 击杀 ${target.name}${condText}`);
                         this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
                         this.addDeathAnimation(target);
-                        // 触发击杀事件
-                        const hookResult = window.Effect.trigger(attacker, 'onKill', target, this.state);
-                        hookResult.results.forEach(r => {
-                            if (r) {
-                                if (r.extraAction) extraAction = true;
-                                if (r.showText) this.showFloatingText(attacker.x, attacker.y, r.showText, 'heal');
-                                if (r.logText) this.state.logs.push(r.logText);
-                            }
-                        });
+                        // 常胜被动
+                        if (attacker._passive_changSheng && target.generalId) {
+                            extraAction = true;
+                        }
                     } else {
                         this.state.logs.push(`${attacker.name} ${skillName} ${target.name} -${res.damage}${condText}`);
                         this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
@@ -718,6 +713,33 @@ const Game = {
             } else if (res.type === 'shredDef') {
                 this.state.logs.push(`${attacker.name} 破甲 ${target.name}`);
                 this.showFloatingText(target.x, target.y, '破甲', 'damage');
+            } else if (res.type === 'shuiYan') {
+                this.addHitAnimation(target);
+                const riverText = res.riverBonus ? '（河流翻倍）' : '';
+                if (target.dead) {
+                    this.state.logs.push(`${attacker.name} 水淹击杀 ${target.name}${riverText}`);
+                    this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
+                    this.addDeathAnimation(target);
+                } else {
+                    this.state.logs.push(`${attacker.name} 水淹 ${target.name} -${res.damage}${riverText}`);
+                    this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
+                }
+                if (res.slow) {
+                    this.showFloatingText(target.x, target.y, '减速', 'damage');
+                }
+            } else if (res.type === 'danYong') {
+                this.addHitAnimation(target);
+                if (target.dead) {
+                    this.state.logs.push(`${attacker.name} 胆勇击杀 ${target.name}`);
+                    this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
+                    this.addDeathAnimation(target);
+                    if (attacker._passive_changSheng && target.generalId) {
+                        extraAction = true;
+                    }
+                } else {
+                    this.state.logs.push(`${attacker.name} 胆勇 ${target.name} -${res.damage}`);
+                    this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
+                }
             } else if (res.type === 'summon') {
                 this.state.logs.push(`${attacker.name} 召唤 ${res.unit.name}`);
             }
@@ -736,15 +758,10 @@ const Game = {
                             this.addHitAnimation(tUnit);
                             if (tUnit.dead) {
                                 this.addDeathAnimation(tUnit);
-                                // 触发击杀事件
-                                const hookResult = window.Effect.trigger(attacker, 'onKill', tUnit, this.state);
-                                hookResult.results.forEach(r => {
-                                    if (r) {
-                                        if (r.extraAction) extraAction = true;
-                                        if (r.showText) this.showFloatingText(attacker.x, attacker.y, r.showText, 'heal');
-                                        if (r.logText) this.state.logs.push(r.logText);
-                                    }
-                                });
+                                // 常胜被动
+                                if (attacker._passive_changSheng && tUnit.generalId) {
+                                    extraAction = true;
+                                }
                             }
                         }
                     }
@@ -757,14 +774,9 @@ const Game = {
                 this.showFloatingText(target.x, target.y, `-${res.damage}`, 'damage');
                 if (target.dead) {
                     this.addDeathAnimation(target);
-                    const hookResult = window.Effect.trigger(attacker, 'onKill', target, this.state);
-                    hookResult.results.forEach(r => {
-                        if (r) {
-                            if (r.extraAction) extraAction = true;
-                            if (r.showText) this.showFloatingText(attacker.x, attacker.y, r.showText, 'heal');
-                            if (r.logText) this.state.logs.push(r.logText);
-                        }
-                    });
+                    if (attacker._passive_changSheng && target.generalId) {
+                        extraAction = true;
+                    }
                 }
             }
         }
@@ -1063,10 +1075,28 @@ const Game = {
         this.state.selectedUnit = null;
         this.cancelSkill();
 
-        // 触发回合开始事件
+        // 关羽【威临】光环扫描：+2范围减攻，+1范围沉默
         this.state.units.forEach(u => {
-            if (!u.dead) {
-                window.Effect.trigger(u, 'onTurnStart', this.state);
+            if (u._passive_weiLin && !u.dead) {
+                const auraRange2 = window.Range.parse('+2', u.x, u.y, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
+                const auraRange1 = window.Range.parse('+1', u.x, u.y, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
+                this.state.units.forEach(enemy => {
+                    if (enemy.dead || enemy.player === u.player) return;
+                    // +2范围减攻10
+                    const inRange2 = auraRange2.find(p => p.x === enemy.x && p.y === enemy.y);
+                    if (inRange2 && !enemy._weiLinDebuffed) {
+                        enemy.atk = Math.max(1, enemy.atk - 10);
+                        enemy._weiLinDebuffed = true;
+                    } else if (!inRange2 && enemy._weiLinDebuffed) {
+                        enemy.atk += 10;
+                        enemy._weiLinDebuffed = false;
+                    }
+                    // +1范围沉默
+                    const inRange1 = auraRange1.find(p => p.x === enemy.x && p.y === enemy.y);
+                    if (inRange1 && !enemy.silenced) {
+                        window.Effect.silence(u, enemy, 1);
+                    }
+                });
             }
         });
 
