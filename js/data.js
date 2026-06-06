@@ -129,8 +129,6 @@ const GENERALS = [
                 category: 'special',
                 content(a, t, gs) {
                     const { Effect } = gs._modules;
-                    // 标记用于兼容旧代码
-                    a._passive_weiLin = true;
                     // 使用事件钩子实现威临光环效果
                     Effect.on(a, 'onTurnStart', (gameState) => {
                         const auraRange2 = window.Range.parse('+2', a.x, a.y, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
@@ -138,12 +136,13 @@ const GENERALS = [
                         gameState.units.forEach(enemy => {
                             if (enemy.dead || enemy.player === a.player) return;
                             const inRange2 = auraRange2.find(p => p.x === enemy.x && p.y === enemy.y);
-                            if (inRange2 && !enemy._weiLinDebuffed) {
+                            const isDebuffed = Effect.hasMark(enemy, 'weiLinDebuff');
+                            if (inRange2 && !isDebuffed) {
                                 enemy.atk = Math.max(1, enemy.atk - 10);
-                                enemy._weiLinDebuffed = true;
-                            } else if (!inRange2 && enemy._weiLinDebuffed) {
+                                Effect.mark(enemy, 'weiLinDebuff', true);
+                            } else if (!inRange2 && isDebuffed) {
                                 enemy.atk += 10;
-                                enemy._weiLinDebuffed = false;
+                                Effect.unmark(enemy, 'weiLinDebuff');
                             }
                             const inRange1 = auraRange1.find(p => p.x === enemy.x && p.y === enemy.y);
                             if (inRange1 && !enemy.silenced) {

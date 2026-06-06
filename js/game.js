@@ -634,7 +634,7 @@ const Game = {
             });
         }
         // 威临减攻
-        if (unit._weiLinDebuffed) tags.push({ cls: 'status-weilin', text: '威' });
+        if (window.Effect.hasMark(unit, 'weiLinDebuff')) tags.push({ cls: 'status-weilin', text: '威' });
         // buffs
         if (unit.buffs) {
             unit.buffs.forEach(b => {
@@ -1089,31 +1089,6 @@ const Game = {
         this.state.units.forEach(u => {
             if (!u.dead) {
                 window.Effect.trigger(u, 'onTurnStart', this.state);
-            }
-        });
-
-        // 关羽【威临】光环扫描（兼容旧代码）
-        this.state.units.forEach(u => {
-            if (u._passive_weiLin && !u.dead) {
-                const auraRange2 = window.Range.parse('+2', u.x, u.y, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
-                const auraRange1 = window.Range.parse('+1', u.x, u.y, window.BLOCKING_TERRAIN_ATTACK, window.TERRAIN);
-                this.state.units.forEach(enemy => {
-                    if (enemy.dead || enemy.player === u.player) return;
-                    // +2范围减攻10
-                    const inRange2 = auraRange2.find(p => p.x === enemy.x && p.y === enemy.y);
-                    if (inRange2 && !enemy._weiLinDebuffed) {
-                        enemy.atk = Math.max(1, enemy.atk - 10);
-                        enemy._weiLinDebuffed = true;
-                    } else if (!inRange2 && enemy._weiLinDebuffed) {
-                        enemy.atk += 10;
-                        enemy._weiLinDebuffed = false;
-                    }
-                    // +1范围沉默
-                    const inRange1 = auraRange1.find(p => p.x === enemy.x && p.y === enemy.y);
-                    if (inRange1 && !enemy.silenced) {
-                        window.Effect.silence(u, enemy, 1);
-                    }
-                });
             }
         });
 

@@ -260,6 +260,29 @@ const Effect = {
             delete this.eventHooks[unit.id];
         }
         return { type: 'hooksCleared' };
+    },
+
+    // 标记系统：给单位添加/移除/查询标记
+    marks: {},
+    mark(unit, markName, data = true) {
+        if (!this.marks[unit.id]) this.marks[unit.id] = {};
+        this.marks[unit.id][markName] = data;
+        return { type: 'mark', markName, data };
+    },
+    unmark(unit, markName) {
+        if (this.marks[unit.id] && this.marks[unit.id][markName] !== undefined) {
+            delete this.marks[unit.id][markName];
+        }
+        return { type: 'unmark', markName };
+    },
+    hasMark(unit, markName) {
+        return this.marks[unit.id] ? this.marks[unit.id][markName] : undefined;
+    },
+    clearMarks(unit) {
+        if (unit && this.marks[unit.id]) {
+            delete this.marks[unit.id];
+        }
+        return { type: 'marksCleared' };
     }
 };
 
