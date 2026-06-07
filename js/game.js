@@ -674,35 +674,6 @@ const Game = {
                 }
             }
             this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
-        } else if (result.type === 'tuci') {
-            if (result.move) this.state.logs.push(`${unit.name} 突进至 (${result.move.x},${result.move.y})`);
-            this.state.logs.push(`${unit.name} 突刺 ${target.name} -${result.damage}`);
-            if (target.dead) {
-                this.state.logs.push(`${target.name} 阵亡`);
-                
-                // 触发击杀事件钩子
-                const killHookResult = window.Effect.trigger(unit, 'afterKill', target, this.state);
-                let extraActionGranted = false;
-                killHookResult.results.forEach(result => {
-                    if (result) {
-                        if (result.extraAction) {
-                            extraActionGranted = true;
-                        }
-                        if (result.logText) {
-                            this.state.logs.push(result.logText);
-                        }
-                        if (result.showText) {
-                            this.showFloatingText(unit.x, unit.y, result.showText, 'heal');
-                        }
-                    }
-                });
-                
-                if (extraActionGranted || (unit._passive_changsheng && !unit.extraActionGranted)) {
-                    unit.extraActionGranted = true;
-                    window.Effect.grantExtraAction(unit);
-                }
-            }
-            this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
         } else if (result.type === 'shuiyan') {
             const log = result.riverBonus ? `${unit.name} 水淹七军 ${target.name} -${result.damage}（河流加成）并减速！` : `${unit.name} 水淹七军 ${target.name} -${result.damage} 并减速！`;
             this.state.logs.push(log);

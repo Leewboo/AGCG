@@ -91,63 +91,6 @@ const Skills = {
             return { ...dmgResult, type: 'shuiyan', slow: slowResult, riverBonus: isRiver };
         },
         desc: '主动：十字3格，对目标造成30伤害并减速1（持续2回合）；若目标在河流地形上，伤害翻倍'
-    },
-
-    // 马超技能
-    tieqi: {
-        id: 'tieqi',
-        name: '铁骑',
-        type: 'passive',
-        category: 'special',
-        content(a, t, gs) {
-            const { Effect } = gs._modules;
-            Effect.mark(a, 'tieqiCharge', 0);
-            Effect.mark(a, 'tieqiOriginalAtk', a.atk);
-            
-            Effect.on(a, 'afterMove', (gameState) => {
-                let charge = Effect.hasMark(a, 'tieqiCharge') || 0;
-                charge = Math.min(3, charge + 1); // 最多3层
-                Effect.mark(a, 'tieqiCharge', charge);
-                const originalAtk = Effect.hasMark(a, 'tieqiOriginalAtk');
-                a.atk = Math.floor(originalAtk * (1 + charge * 0.2)); // 每层+20%攻击力
-                return { showText: `铁骑! +${charge * 20}%` };
-            });
-            
-            Effect.on(a, 'afterAttack', (gameState) => {
-                Effect.mark(a, 'tieqiCharge', 0);
-                const originalAtk = Effect.hasMark(a, 'tieqiOriginalAtk');
-                a.atk = originalAtk;
-            });
-            return { type: 'passive' };
-        },
-        desc: '被动：每次移动后下次攻击攻击力+20%，最多累计+60%，攻击后效果重置'
-    },
-    tuci: {
-        id: 'tuci',
-        name: '突刺',
-        type: 'active',
-        category: 'special',
-        range: '+5',
-        step1: 'selectEnemy',
-        step1Range: '+5',
-        step2: 'selectLanding',
-        step2Range: 'r1',
-        content(a, t, gs, landingPos) {
-            const { Effect } = gs._modules;
-            const moveResult = Effect.moveTo(a, landingPos.x, landingPos.y);
-            
-            // 临时降低目标30%防御
-            const originalDef = t.def;
-            t.def = Math.floor(t.def * 0.7);
-            const dmgResult = Effect.damage(a, t, 40);
-            t.def = originalDef;
-            
-            // 触发铁骑效果
-            Effect.trigger(a, 'afterMove', gs);
-            
-            return { ...dmgResult, type: 'tuci', move: moveResult };
-        },
-        desc: '主动：选择5格内敌方目标，移动到其身边，造成40点穿透伤害（忽略目标30%防御）'
     }
 };
 

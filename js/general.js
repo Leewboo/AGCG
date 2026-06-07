@@ -45,28 +45,6 @@ const Generals = [
             window.Skills.weilin,
             window.Skills.shuiyan
         ]
-    },
-    {
-        id: 'machao',
-        name: '马超',
-        hp: 190,
-        atk: 55,
-        def: 18,
-        mov: 4,
-        moveRange: '+4',
-        attackRange: '+1',
-        quotes: {
-            move: ['铁骑踏破，无人能挡！', '杀！杀！杀！'],
-            attack: ['尝尝我的厉害！', '来战！'],
-            skill: ['突刺！', '铁骑冲锋！'],
-            kill: ['又一个刀下亡魂！', '痛快！'],
-            hurt: ['不碍事！', '再来！'],
-            death: ['父亲……仇……未报……']
-        },
-        skills: [
-            window.Skills.tieqi,
-            window.Skills.tuci
-        ]
     }
 ];
 
