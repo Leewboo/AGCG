@@ -521,6 +521,17 @@ const Game = {
             mover.y = y;
             mover.moved = true;
             this.chargeEnergy(mover, 'afterMove');
+            
+            // 触发移动后事件钩子
+            const moveHookResult = window.Effect.trigger(mover, 'afterMove', this.state);
+            if (moveHookResult.results.length > 0) {
+                moveHookResult.results.forEach(result => {
+                    if (result && result.showText) {
+                        this.showFloatingText(mover.x, mover.y, result.showText, 'heal');
+                    }
+                });
+            }
+            
             this.clearHighlights();
             this.state.logs.push(`${mover.name} 移动`);
             this.showMoves(mover);
@@ -536,16 +547,44 @@ const Game = {
                 if (result.counter) this.state.logs.push(`${unit.name} 反击 ${attacker.name} -${result.counter}`);
                 if (unit.dead) {
                     this.state.logs.push(`${unit.name} 阵亡`);
-                    if (attacker._passive_changsheng && !attacker.extraActionGranted) {
+                    
+                    // 触发击杀事件钩子
+                    const killHookResult = window.Effect.trigger(attacker, 'afterKill', unit, this.state);
+                    let extraActionGranted = false;
+                    killHookResult.results.forEach(result => {
+                        if (result) {
+                            if (result.extraAction) {
+                                extraActionGranted = true;
+                            }
+                            if (result.logText) {
+                                this.state.logs.push(result.logText);
+                            }
+                            if (result.showText) {
+                                this.showFloatingText(attacker.x, attacker.y, result.showText, 'heal');
+                            }
+                        }
+                    });
+                    
+                    if (extraActionGranted || (attacker._passive_changsheng && !attacker.extraActionGranted)) {
                         attacker.extraActionGranted = true;
                         window.Effect.grantExtraAction(attacker);
-                        this.state.logs.push(`${attacker.name} 获得额外行动！`);
                     }
                 }
             }
             attacker.attacked = true;
             this.chargeEnergy(attacker, 'afterAttack');
             this.chargeEnergy(attacker, 'afterAction');
+            
+            // 触发攻击后事件钩子
+            const attackHookResult = window.Effect.trigger(attacker, 'afterAttack', this.state);
+            if (attackHookResult.results.length > 0) {
+                attackHookResult.results.forEach(result => {
+                    if (result && result.showText) {
+                        this.showFloatingText(attacker.x, attacker.y, result.showText, 'heal');
+                    }
+                });
+            }
+            
             this.showFloatingText(unit.x, unit.y, result.type === 'dodge' ? '闪避' : `-${result.damage}`, result.type === 'dodge' ? 'heal' : 'damage');
             if (result.counter) setTimeout(() => this.showFloatingText(attacker.x, attacker.y, `-${result.counter}`, 'damage'), 200);
             this.clearHighlights();
@@ -605,15 +644,62 @@ const Game = {
         if (skill.energyCost) unit.energy -= skill.energyCost;
         unit.usedSkill = true;
         const result = skill.content(unit, target, this.state, extraArg);
+        
         if (result.type === 'danyong') {
             if (result.move) this.state.logs.push(`${unit.name} 突进至 (${result.move.x},${result.move.y})`);
             this.state.logs.push(`${unit.name} 胆勇 ${target.name} -${result.damage}`);
             if (target.dead) {
                 this.state.logs.push(`${target.name} 阵亡`);
-                if (unit._passive_changsheng && !unit.extraActionGranted) {
+                
+                // 触发击杀事件钩子
+                const killHookResult = window.Effect.trigger(unit, 'afterKill', target, this.state);
+                let extraActionGranted = false;
+                killHookResult.results.forEach(result => {
+                    if (result) {
+                        if (result.extraAction) {
+                            extraActionGranted = true;
+                        }
+                        if (result.logText) {
+                            this.state.logs.push(result.logText);
+                        }
+                        if (result.showText) {
+                            this.showFloatingText(unit.x, unit.y, result.showText, 'heal');
+                        }
+                    }
+                });
+                
+                if (extraActionGranted || (unit._passive_changsheng && !unit.extraActionGranted)) {
                     unit.extraActionGranted = true;
                     window.Effect.grantExtraAction(unit);
-                    this.state.logs.push(`${unit.name} 获得额外行动！`);
+                }
+            }
+            this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
+        } else if (result.type === 'tuci') {
+            if (result.move) this.state.logs.push(`${unit.name} 突进至 (${result.move.x},${result.move.y})`);
+            this.state.logs.push(`${unit.name} 突刺 ${target.name} -${result.damage}`);
+            if (target.dead) {
+                this.state.logs.push(`${target.name} 阵亡`);
+                
+                // 触发击杀事件钩子
+                const killHookResult = window.Effect.trigger(unit, 'afterKill', target, this.state);
+                let extraActionGranted = false;
+                killHookResult.results.forEach(result => {
+                    if (result) {
+                        if (result.extraAction) {
+                            extraActionGranted = true;
+                        }
+                        if (result.logText) {
+                            this.state.logs.push(result.logText);
+                        }
+                        if (result.showText) {
+                            this.showFloatingText(unit.x, unit.y, result.showText, 'heal');
+                        }
+                    }
+                });
+                
+                if (extraActionGranted || (unit._passive_changsheng && !unit.extraActionGranted)) {
+                    unit.extraActionGranted = true;
+                    window.Effect.grantExtraAction(unit);
                 }
             }
             this.showFloatingText(target.x, target.y, `-${result.damage}`, 'damage');
@@ -676,7 +762,27 @@ const Game = {
     },
 
     endTurn() {
-        this.applyWeilinDebuff();
+        // 一方操作完成，切换到另一方
+        if (this.state.currentPlayer === 1) {
+            // 红方操作完成，切换到蓝方
+            this.state.currentPlayer = 2;
+            this.state.logs.push('蓝方行动');
+        } else {
+            // 蓝方操作完成，回合+1，切换到红方（新回合开始）
+            this.state.turn++;
+            this.state.currentPlayer = 1;
+            this.state.logs.push(`=== 第${this.state.turn}回合开始===`);
+            this.state.logs.push('红方行动');
+        }
+        
+        // 触发所有存活单位的回合开始事件钩子
+        this.state.units.forEach(u => {
+            if (!u.dead) {
+                window.Effect.trigger(u, 'onTurnStart', this.state);
+            }
+        });
+        
+        // 重置状态
         this.state.units.forEach(u => {
             if (u.poisoned && !u.dead) {
                 const poisonDmg = Math.floor(u.poisoned / 2);
@@ -717,48 +823,11 @@ const Game = {
         this.state.selectedUnit = null;
         this.clearHighlights();
         
-        // 一方操作完成，切换到另一方
-        if (this.state.currentPlayer === 1) {
-            // 红方操作完成，切换到蓝方
-            this.state.currentPlayer = 2;
-            this.state.logs.push('蓝方行动');
-        } else {
-            // 蓝方操作完成，回合+1，切换到红方（新回合开始）
-            this.state.turn++;
-            this.state.currentPlayer = 1;
-            this.state.logs.push(`=== 第${this.state.turn}回合开始 ===`);
-            this.state.logs.push('红方行动');
-        }
-        
         if (this.state.mode === 'pve' && this.state.currentPlayer === 2) {
             this.aiTurn();
         } else {
             this.renderBattle();
         }
-    },
-
-    applyWeilinDebuff() {
-        this.state.units.forEach(u => {
-            if (u._originalAtk !== undefined) {
-                u.atk = u._originalAtk;
-                delete u._originalAtk;
-            }
-            if (u._temporarySilence) delete u._temporarySilence;
-        });
-        const weilinUnits = this.state.units.filter(u => !u.dead && u._passive_weilin);
-        weilinUnits.forEach(weilin => {
-            const enemies = this.state.units.filter(u => !u.dead && u.player !== weilin.player);
-            enemies.forEach(e => {
-                const dist = Math.abs(e.x - weilin.x) + Math.abs(e.y - weilin.y);
-                if (dist <= 2) {
-                    if (e._originalAtk === undefined) e._originalAtk = e.atk;
-                    e.atk = Math.max(0, e._originalAtk - 10);
-                }
-                if (dist <= 1) {
-                    e._temporarySilence = true;
-                }
-            });
-        });
     },
 
     aiTurn() {

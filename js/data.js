@@ -1,5 +1,5 @@
 // ================================
-// 游戏数据
+// 游戏数据（地形、召唤物等常量）
 // ================================
 
 const BOARD_SIZE_DATA = 12;
@@ -29,111 +29,30 @@ window.TERRAIN_LABELS = TERRAIN_LABELS;
 
 window.TERRAIN = TERRAIN;
 
-const BLOCKING_TERRAIN_MOVE = new Set([1, 2]);
+// 地形阻断规则
+const BLOCKING_TERRAIN_MOVE = new Set([1, 2]); // 山脉+河流阻断移动
 window.BLOCKING_TERRAIN_MOVE = BLOCKING_TERRAIN_MOVE;
 
-const BLOCKING_TERRAIN_ATTACK = new Set([1]);
+const BLOCKING_TERRAIN_ATTACK = new Set([1]); // 山脉阻断攻击(河流可攻击跨越)
 window.BLOCKING_TERRAIN_ATTACK = BLOCKING_TERRAIN_ATTACK;
 
-const GENERALS = [
-    {
-        id: 'zhaoyun',
-        name: '赵云',
-        hp: 180,
-        atk: 50,
-        def: 20,
-        mov: 3,
-        moveRange: '+3',
-        attackRange: '+1',
-        quotes: {
-            move: ['长枪所向，披靡万里！', '七进七出，何惧之有？'],
-            attack: ['胆敢挡我？', '看枪！'],
-            skill: ['一身是胆！', '纵马长驱！'],
-            kill: ['常胜将军，岂是虚言？', '又下一城！'],
-            hurt: ['这点伤，算什么！', '再来！'],
-            death: ['主公……云……尽力了……']
-        },
-        skills: [
-            {
-                id: 'changsheng',
-                name: '常胜',
-                type: 'passive',
-                category: 'special',
-                content(a, t, gs) {
-                    a._passive_changsheng = true;
-                    return { type: 'passive' };
-                },
-                desc: '被动：击杀敌方武将时，立即恢复移动和攻击机会'
-            },
-            {
-                id: 'danyong',
-                name: '胆勇',
-                type: 'active',
-                category: 'special',
-                range: '+4',
-                step1: 'selectEnemy',
-                step1Range: '+4',
-                step2: 'selectLanding',
-                step2Range: 'r2',
-                content(a, t, gs, landingPos) {
-                    const { Effect } = gs._modules;
-                    const moveResult = Effect.moveTo(a, landingPos.x, landingPos.y);
-                    const dmgResult = Effect.damage(a, t, 30);
-                    return { ...dmgResult, type: 'danyong', move: moveResult };
-                },
-                desc: '主动：十字4格选择敌方棋子，然后在其r2范围内选择一个空格作为落点，突进造成30伤害（每回合限用一次）'
-            }
-        ]
-    },
-    {
-        id: 'guanyu',
-        name: '关羽',
-        hp: 200,
-        atk: 45,
-        def: 25,
-        mov: 2,
-        moveRange: '+2',
-        attackRange: '+1',
-        quotes: {
-            move: ['过五关，斩六将！', '敌将休走！'],
-            attack: ['刀下不斩无名之辈！', '看刀！'],
-            skill: ['水淹七军！', '吾乃关羽！'],
-            kill: ['痛快！', '首级在此！'],
-            hurt: ['区区小伤！', '再来！'],
-            death: ['大哥……云长……去也……']
-        },
-        skills: [
-            {
-                id: 'weilin',
-                name: '威临',
-                type: 'passive',
-                category: 'special',
-                content(a, t, gs) {
-                    a._passive_weilin = true;
-                    return { type: 'passive' };
-                },
-                desc: '被动：周围+2范围内的敌方武将攻击力-10。周围+1范围内的敌方武将无法使用主动技能'
-            },
-            {
-                id: 'shuiyan',
-                name: '水淹',
-                type: 'active',
-                category: 'special',
-                range: '+3',
-                energyCost: 2,
-                chargeTrigger: 'afterAction',
-                content(a, t, gs) {
-                    const { Effect } = gs._modules;
-                    const isRiver = TERRAIN[t.y] && TERRAIN[t.y][t.x] === 2;
-                    const dmg = isRiver ? 60 : 30;
-                    const dmgResult = Effect.damage(a, t, dmg);
-                    const slowResult = Effect.slow(a, t, 1, 2);
-                    return { ...dmgResult, type: 'shuiyan', slow: slowResult, riverBonus: isRiver };
-                },
-                desc: '主动：十字3格，对目标造成30伤害并减速1（持续2回合）。若目标在河流地形上，伤害翻倍'
-            }
-        ]
-    }
-];
+// 召唤物数据
+const SUMMONS = {
+    soldier: { name: '士兵', hp: 40, atk: 8, def: 5, mov: 2 },
+    archer: { name: '弓手', hp: 30, atk: 12, def: 3, mov: 2 },
+    wall: { name: '盾墙', hp: 80, atk: 0, def: 20, mov: 0 }
+};
+window.SUMMONS = SUMMONS;
 
-window.GENERALS = GENERALS;
+// 能量获取条件（已废弃，改为技能级充能机制 chargeTrigger）
+const ENERGY_ON_KILL = 0;
+window.ENERGY_ON_KILL = ENERGY_ON_KILL;
+
+const ENERGY_ON_HURT = 0;
+window.ENERGY_ON_HURT = ENERGY_ON_HURT;
+
+const ENERGY_ON_TURN = 0;
+window.ENERGY_ON_TURN = ENERGY_ON_TURN;
+
+const ENERGY_ON_ATTACK = 0;
+window.ENERGY_ON_ATTACK = ENERGY_ON_ATTACK;

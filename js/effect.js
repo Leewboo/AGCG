@@ -187,6 +187,47 @@ const Effect = {
             return !gameState.units.find(u => u.x === p.x && u.y === p.y && !u.dead);
         });
         return { type: 'selectLanding', positions, target };
+    },
+
+    // 标记系统
+    marks: {},
+    mark(unit, markName, data = true) {
+        if (!this.marks[unit.id]) this.marks[unit.id] = {};
+        this.marks[unit.id][markName] = data;
+        return { type: 'mark', markName, data };
+    },
+    unmark(unit, markName) {
+        if (this.marks[unit.id] && this.marks[unit.id][markName] !== undefined) {
+            delete this.marks[unit.id][markName];
+        }
+        return { type: 'unmark', markName };
+    },
+    hasMark(unit, markName) {
+        return this.marks[unit.id] ? this.marks[unit.id][markName] : undefined;
+    },
+    clearMarks(unit) {
+        if (unit && this.marks[unit.id]) {
+            delete this.marks[unit.id];
+        }
+        return { type: 'marksCleared' };
+    },
+
+    // 事件钩子系统
+    eventHooks: {},
+    on(unit, eventName, callback) {
+        if (!this.eventHooks[unit.id]) this.eventHooks[unit.id] = {};
+        if (!this.eventHooks[unit.id][eventName]) this.eventHooks[unit.id][eventName] = [];
+        this.eventHooks[unit.id][eventName].push(callback);
+        return { type: 'hookRegistered' };
+    },
+    trigger(unit, eventName, ...args) {
+        const results = [];
+        if (this.eventHooks[unit.id] && this.eventHooks[unit.id][eventName]) {
+            this.eventHooks[unit.id][eventName].forEach(callback => {
+                results.push(callback(...args));
+            });
+        }
+        return { type: 'triggered', results };
     }
 };
 
